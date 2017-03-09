@@ -15,7 +15,7 @@ asmb:
 	#mov %rsi, %rcx
 	
 
-test:	#mov 0(%rdi), %rax
+#test:	#mov 0(%rdi), %rax
 	#mul %r8 #r0 = x0*y (0)
 	#rdx (1)	
 
