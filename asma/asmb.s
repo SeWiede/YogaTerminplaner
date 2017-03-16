@@ -10,38 +10,26 @@ asmb:
 	#frei: rax, r8, r9, r10, r11
 		
 	#y saven 
-	#mov %rdx, %r8	
-	#mov %rcx, %r11
-	#mov %rsi, %rcx
+;	mov %rdx, %r8	
+;	mov %rcx, %r11
+;	mov %rsi, %rcx
 	
+;	mov $0, %rdx
+test:	
+;	mov 0(%rdi), %rax
+;	mul %r8
+	#rax = (0:16)
+	#rdx = (16:32)
+;	adc %rdx, %rax
+	;mov %rax, 0(%r11)
 
-#test:	#mov 0(%rdi), %rax
-	#mul %r8 #r0 = x0*y (0)
-	#rdx (1)	
+	;lea 8(%r11, %r11, 1), %r11
+	;lea 8(%rdi, %rdi, 1), %rdi	
+;	loop test
 
-#	mov %rax, %r9
-	#mov %rax, 0(%r11)	
-	#mov %rdx, %r10 #(1) speichern
+	;mov %rdx, 0(%r11)
 
-	
-	#mov %rsi, %rax #x1 
-	
-	#mul %r8
-	#rax = x1*y (0) rdx (1)
-	#add %r10, %rax
-	
-	#mov %rax, %r10 #r10 = r1
-	#mov %r10, 8(%r11)
-
-	#adc $0, %rdx
-
-	#mov %rdx, 16(%r11)
-	
-	#add 24, %r11
-	#add 24, %rdi
-#	loop test
-	#mov %r11, 16(%rcx)
-
+	ret
 
 	.cfi_endproc
 .LFE0:
