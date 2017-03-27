@@ -20,7 +20,7 @@ CC \)\*
 <comment>"*"+")" /*printf("COMMENT %s\n", yytext);*/BEGIN(INITIAL);
 
 {KEYWORD}|{SPECIAL}|"!=" 	{printf("%s\n", yytext);;}
-{ID}	 	{printf("id %s\n", yytext);exit(0);}
+{ID}	 	{printf("id %s\n", yytext);}
 {NUMBER} 	{	int i=0;
 				int j=0;
 				for(i,j;j<=yyleng;i++, j++){
