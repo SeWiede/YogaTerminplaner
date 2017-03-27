@@ -6,48 +6,30 @@ asmb:
 .LFB0:
 	.cfi_startproc
 	
-	#x=rdi, n=rsi/rcx, y= rdx , *a = rcx/r11	
-	#frei: rax, r8, r9, r10, r11
+	#x=rdi, n=rsi/rcx, y= rdx , *a = rcx/rsi	
+	#frei: rax, r8, r9, r10, rsi
 		
 	#y saven 
+	#mov %rcx, %rsi
+	xchg %rsi, %rcx
+	jrcxz end
 	mov %rdx, %r8	
-	mov %rcx, %r11
-	mov %rsi, %rcx
-	
-	mov $0, %rdx
-	mov $0, %r10
-	jecxz end
-test:	
-	mov 0(%rdi), %rax
+
+#	mov $0, %rdx
+#	mov $0, %r10
+	mov $0, %r11	
+l:	
+	mov 0(%rdi, %r11, 8), %rax
  	mul %r8
-    add %r10, %rax
-	mov %rdx, %r10
-	adc $0, %r10
-	#rax = (0:16)
-	#rdx = (16:32)
-	mov %rax, 0(%r11)
+	mov %rdx, 8(%rsi, %r11, 8)
+    add %rax, 0(%rsi, %r11, 8)
+	adc $0, 8(%rsi, %r11, 8)
+	#mov %rax, 0(%rsi, %r11, 8)
+	add $1, %r11#%rsi
+	#add $8, %rdi	
+	loop l
 
-	#lea 8(%r11, %r11, 0), %r11
-	#lea 8(%rdi, %rdi, 0), %rdi
-	inc %r11	
-	inc %rdi	
-	inc %r11	
-	inc %rdi
-	inc %r11	
-	inc %rdi
-	inc %r11	
-	inc %rdi
-	inc %r11	
-	inc %rdi
-	inc %r11	
-	inc %rdi
-	inc %r11	
-	inc %rdi
-	inc %r11	
-	inc %rdi
-	loop test
-
-	mov %r10, 0(%r11)
+#	mov %r10, 0(%rsi, %r11, 8)
 end:
 	ret
 
