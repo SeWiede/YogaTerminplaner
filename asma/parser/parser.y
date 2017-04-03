@@ -27,11 +27,11 @@ Program: Funcdef SEMICOLON Program
 Funcdef: ID BOPEN Pars BCLOSE Stats END
 	;
 
-Pars: mayPars 
+Pars: 
+	| mayPars 
 	;
 
-mayPars:
-	| ID COMMA Pars
+mayPars: ID COMMA Pars
 	| ID
 	;
 
@@ -44,7 +44,6 @@ Labeldefs:
 
 Stats:
 	| Stats Labeldefs Stat SEMICOLON
-	| Labeldefs Stat SEMICOLON
 	;
 
 Stat: RETURN Expr
@@ -75,26 +74,35 @@ Lexpr: ID
 
 
 
-Expr: Term pTerm
-	| Term mTerm
-	| minus Term
+Expr: Term
+	| plusExpr
+	| mulExpr
+	| minusExpr
 	;
 
 mayExpr:
 	| Expr
 	;
 
-pTerm:
-	| pTerm PLUS Term
+mayplus:
+	| PLUS Term mayplus
 	;
 
-mTerm:
-	| mTerm MUL  Term
+plusExpr: Term PLUS Term mayplus
 	;
 
+maymul:
+	| MUL Term mayplus
+	;
 
-minus:
-	| minus MINUS
+mulExpr: Term MUL Term maymul
+	;
+
+mayminus: 
+	| mayminus MINUS
+	;
+
+minusExpr: mayminus MINUS Term
 	;
 
 
