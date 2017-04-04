@@ -92,7 +92,7 @@ plusExpr: Term PLUS Term mayplus
 	;
 
 maymul:
-	| MUL Term mayplus
+	| MUL Term maymul
 	;
 
 mulExpr: Term MUL Term maymul
