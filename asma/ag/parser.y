@@ -44,7 +44,7 @@ void printList(NameList list)
 	}
 
 	do {
-		printf("%s - %s - %s", list->name, 
+		printf("%s - %s - %s\n", list->name, 
 			list->occ == USE ? "USAGE" : "DEFINITION", 
 			list->typ == LABEL ? "LABEL" : "VARIABLE");
 		list = list->next;
@@ -80,18 +80,24 @@ int anyNameExists(NameList n, char * name){
 
 int checkNames(NameList n){
 	NameList tmp = n;
+	NameList head = n;
 	while(tmp != NULL){
 		switch (tmp->typ){
 		case VARIABLE:
-			if((tmp->occ == DEF) && (anyNameExists(tmp->next, tmp->name) == 1))
-				return 3;
-			if((tmp->occ == USE) && (nameExists(tmp->next, tmp->name, DEF, VARIABLE) == 0))
-				return 3;
+			printf("Name here: %s, OCC here: %d\n", tmp->name, tmp->occ);
+			if((tmp->occ == DEF) && (anyNameExists(tmp->next, tmp->name) == 1)){
+				printf("defined or used previously\n");
+				return 0;
+			}
+			if((tmp->occ == USE) && (nameExists(tmp->next, tmp->name, DEF, VARIABLE) == 0)) {
+				printf("not defined yet\n");
+				return 0;
+			}
 			break;
 		case LABEL:
-			if((tmp->occ == DEF) && (anyNameExists(tmp->next, tmp->name) == 1))
+			if((tmp->occ == DEF) && (nameExists(tmp->next, tmp->name, DEF, TYP_ANY) == 1))
 				return 0;
-			if((tmp->occ == USE) && (nameExists(tmp->next, tmp->name, DEF, LABEL) == 0))
+			if((tmp->occ == USE) && (nameExists(head, tmp->name, DEF, LABEL) == 0))
 				return 0;
 			break;
 		default:
@@ -114,8 +120,10 @@ int checkNames(NameList n){
 
 Program: Funcdef SEMICOLON Program
 	@{
-		@e Program.names : Funcdef.names Program.1.names;
-		@Program.names@ = concatList(@Funcdef.names@, @Program.1.names@); 
+		@e Program.names : Funcdef.names;
+		@Program.names@ = @Funcdef.names@;
+		@post printList(@Program.names@); 
+		@post printf("------------------------\n");
 		@post if(checkNames(@Program.names@) == 0) exit(3); 
 	@}
 	|
@@ -127,7 +135,7 @@ Program: Funcdef SEMICOLON Program
 Funcdef: ID BOPEN Pars BCLOSE Stats END
 	@{
 		@e Funcdef.names : Pars.names Stats.names;
-		@Funcdef.names@ = concatList(@Pars.names@, @Stats.names@);
+		@Funcdef.names@ = concatList(@Stats.names@, @Pars.names@);
 	@}	
 	;
 
@@ -157,7 +165,7 @@ mayPars: ID COMMA Pars
 Labeldef: ID COLON
 	@{
 		@e Labeldef.names : ID.name;
-		@Labeldef.names@ = createList(@ID.name@, DEF, VARIABLE, NULL);
+		@Labeldef.names@ = createList(@ID.name@, DEF, LABEL, NULL);
 	@}
 	;
 
@@ -179,7 +187,7 @@ Stats:
 	| Stats Labeldefs Stat SEMICOLON
 	@{
 		@e Stats.names : Stats.1.names Labeldefs.names Stat.names;
-		@Stats.names@ = concatList(@Stats.1.names@, concatList(@Labeldefs.names@, @Stat.names@));
+		@Stats.names@ = concatList(concatList(@Stat.names@, @Labeldefs.names@), @Stats.1.names@);
 	@}
 	;
 
@@ -191,12 +199,12 @@ Stat: RETURN Expr
 	| GOTO ID
 	@{
 		@e Stat.names : ID.name;
-		@Stat.names@ = createList(@ID.name@, DEF, VARIABLE, NULL);
+		@Stat.names@ = createList(@ID.name@, USE, LABEL, NULL);
 	@}
 	| IF Cond GOTO ID
 	@{
 		@e Stat.names : Cond.names ID.name;
-		@Stat.names@ = createList(@ID.name@, DEF, VARIABLE, @Cond.names@);//concat+ create?
+		@Stat.names@ = createList(@ID.name@, USE, LABEL, @Cond.names@);//concat+ create?
 	@}
 	| Lexpr EQU Expr
 	@{
@@ -259,7 +267,7 @@ Cterm: BOPEN Cond BCLOSE
 Lexpr: ID
 	@{
 		@e Lexpr.names : ID.name;
-		@Lexpr.names@ = createList(@ID.name@, DEF, VARIABLE, NULL);
+		@Lexpr.names@ = createList(@ID.name@, USE, VARIABLE, NULL);
 	@}
 	| Term SQOPEN Expr SQCLOSE
 	@{
@@ -370,7 +378,7 @@ Term: BOPEN Expr BCLOSE
 	| ID
 	@{
 		@e Term.names : ID.name;
-		@Term.names@ = createList(@ID.name@, DEF, VARIABLE, NULL);
+		@Term.names@ = createList(@ID.name@, USE, VARIABLE, NULL);
 	@}
 	| NUMBER
 	@{
@@ -379,7 +387,7 @@ Term: BOPEN Expr BCLOSE
 	| Term SQOPEN Expr SQCLOSE
 	@{
 		@e Term.names : Term.1.names Expr.names;
-		@Term.names@ = concatList(@Term.1.names@ , @Expr.names@);
+		@Term.names@ = concatList(@Expr.names@ , @Term.1.names@);
 	@}
 	| ID BOPEN beistrichExpr mayExpr BCLOSE
 	@{
