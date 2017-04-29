@@ -44,7 +44,8 @@ CC \)\*
 "not" return NOT;
 
 
-{ID}	 	{return ID;}@{@i @ID.name@ = strdup(yytext);@}
+{ID}	 	return ID;	@{@ID.name@ = strdup(yytext);@}
+
 {NUMBER} 	{	int i=0;
 				int j=0;
 				for(i,j;j<=yyleng;i++, j++){
@@ -55,7 +56,7 @@ CC \)\*
 				}
 				yylval = atoi(yytext);
 				return NUMBER;
-				//printf("num %d\n", atoi(yytext));
+				//printf("num %d\n", atoi(yytext));	
 			}
 [ _\n\r\t]
 .|\n exit(1);

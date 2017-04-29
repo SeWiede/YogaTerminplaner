@@ -18,13 +18,13 @@ main(){
 typedef enum type{TYP_ANY = 0, VARIABLE = 1, LABEL = 2} Type;
 typedef enum occ{OCC_ANY =0, USE =1, DEF=2} Occurence;
 
-typedef struct list {
+struct list {
 	char *name;
 	Type typ;
 	Occurence occ;
  	struct list *next;
-}Name;
-
+};
+typedef struct list Name;
 typedef Name * NameList;
 
 NameList createList(char *name,  Occurence occ, Type typ, NameList next)
@@ -84,9 +84,9 @@ int checkNames(NameList n){
 		switch (tmp->typ){
 		case VARIABLE:
 			if((tmp->occ == DEF) && (anyNameExists(tmp->next, tmp->name) == 1))
-				return 0;
+				return 3;
 			if((tmp->occ == USE) && (nameExists(tmp->next, tmp->name, DEF, VARIABLE) == 0))
-				return 0;
+				return 3;
 			break;
 		case LABEL:
 			if((tmp->occ == DEF) && (anyNameExists(tmp->next, tmp->name) == 1))
@@ -97,6 +97,7 @@ int checkNames(NameList n){
 		default:
 			return 0;
 		}
+		tmp = tmp->next;
 	}
 	return 1;
 }
@@ -105,7 +106,7 @@ int checkNames(NameList n){
 
 %token NUMBER ID SEMICOLON BOPEN BCLOSE COMMA COLON EQU GREATER SQOPEN SQCLOSE MINUS PLUS MUL UNE END RETURN GOTO IF VAR AND NOT
 
-@attributes {NameList names;} Program Funcdef Pars  mayPars Stats Stat Labeldefs Labeldef Expr Cond Lexpr Term andCond Cterm mayExpr mayplus plusExpr maymul mulExpr minusExpr beistrichExpr 
+@attributes {struct list * names;} Program Funcdef Pars  mayPars Stats Stat Labeldefs Labeldef Expr Cond Lexpr Term andCond Cterm mayExpr mayplus plusExpr maymul mulExpr minusExpr beistrichExpr 
 @attributes {char *name;} ID
 @traversal @lefttoright @postorder post
 
@@ -115,7 +116,7 @@ Program: Funcdef SEMICOLON Program
 	@{
 		@e Program.names : Funcdef.names Program.1.names;
 		@Program.names@ = concatList(@Funcdef.names@, @Program.1.names@); 
-		@post if(checkNames(@Program.names@) == 0) return 3; 
+		@post if(checkNames(@Program.names@) == 0) exit(3); 
 	@}
 	|
 	@{
@@ -345,7 +346,7 @@ mayminus:
 minusExpr: mayminus MINUS Term
 	@{
 		@e minusExpr.names : Term.names;
-		@minusExpr.names@ = Term.names@;
+		@minusExpr.names@ = @Term.names@;
 	@}
 	;
 
