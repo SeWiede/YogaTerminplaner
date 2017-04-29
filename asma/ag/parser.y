@@ -1,4 +1,4 @@
-%{#define YYSTYPE int
+%{#define YYSTYPE char *
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -115,6 +115,7 @@ Program: Funcdef SEMICOLON Program
 	@{
 		@e Program.names : Funcdef.names Program.1.names;
 		@Program.names@ = concatList(@Funcdef.names@, @Program.1.names@); 
+		@post if(checkNames(@Program.names@) == 0) return 3; 
 	@}
 	|
 	@{
