@@ -45,7 +45,7 @@ CC \)\*
 "not" return NOT;
 
 
-{ID}	 	{return ID;}
+{ID}	 	{yylval.name = yytext; return ID;}
 {NUMBER} 	{	int i=0;
 				int j=0;
 				for(i,j;j<=yyleng;i++, j++){

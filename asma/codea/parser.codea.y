@@ -18,6 +18,7 @@ int yywrap(){
 
 
 Tree gen_node(Type type, Tree left, Tree right, int const_num, char *name){
+	printf("%d Node name: %s\n", type, name);
 	Tree t = malloc(sizeof(struct tree));
 	OP_LABEL(t) = type;
 	LEFT_CHILD(t) = left;
@@ -36,13 +37,13 @@ Tree gen_node(Type type, Tree left, Tree right, int const_num, char *name){
 %token <number> NUMBER
 %token <name> ID
 %type <node> Expr mayplus plusExpr maymul mulExpr mayminus minusExpr Term
-%start Stats 
+%start Program 
 %left PLUS MUL MINUS
 %token SEMICOLON BOPEN BCLOSE COMMA COLON EQU GREATER SQOPEN SQCLOSE MINUS PLUS MUL UNE END RETURN GOTO IF VAR AND NOT
 
 %%
 
-Program: Funcdef SEMICOLON Program
+Program: Funcdef SEMICOLON Program {printf("test");}
 	| 
 	;
 
@@ -57,7 +58,8 @@ mayPars: ID COMMA Pars
 	| ID
 	;
 
-Stats: RETURN Expr SEMICOLON {if(burm_label($2) ==0)
+Stats: RETURN Expr SEMICOLON { 
+						if(burm_label($2) ==0)
 							fprintf(stderr, "wrong\n");
 						else
 							burm_reduce($2, 1);};

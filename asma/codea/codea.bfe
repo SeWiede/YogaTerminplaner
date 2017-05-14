@@ -4,9 +4,54 @@
 #include <stdio.h>
 #include <assert.h>
 
-static int reg =0;
+enum regs {rax = 0, rbx, rcx, rdx, rsp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15};
+
+int registers[15] = {0};
+
+char *toRegister(int regno) {
+	switch(regno) {
+		case rax: return "%rax";
+		case rbx: return "%rbx";
+		case rcx: return "%rcx";
+		case rdx: return "%rdx";
+		case rsp: return "%rsp";
+		case rsi: return "%rsi";
+		case rdi: return "%rdi";
+		case r8: return "%r8";
+		case r9: return "%r9";
+		case r10: return "%r10";
+		case r11: return "%r11";
+		case r12: return "%r12";
+		case r13: return "%r13";
+		case r14: return "%r14";
+		case r15: return "%r15";
+	}
+}
+
 int getreg(void){
-	return reg++;
+	int i=0;
+	for(i; i<15; i++) {
+		if(registers[i] == 0) {
+			registers[i] = 1;
+			return i;
+		}
+	}
+	printf("out of registers \n");
+	exit(4);
+}
+
+void freeReg(int regno) {
+	if(registers[regno] == 1) {
+		registers[regno] = 0;
+	}
+	else {
+		printf("Register already freed");
+		exit(4);
+	}
+}
+
+int getregForVariable(char *var) {
+	return 10; //TODO: change to something sane
 }
 
 %}
@@ -14,13 +59,13 @@ int getreg(void){
 %term TYPE_VAR=0 TYPE_CONST=1 TYPE_ADD=2 TYPE_SUB=3 TYPE_MUL=4 TYPE_ARRAY=5
 %start Stats
 %%
-Stats: reg	# 1 # printf("\treturn r%d\n", bnode->reg);
+Stats: reg	# 1 # printf("\tmovq %s, %rax\n", toRegister(bnode->reg)); printf("\tret\n");
 reg: TYPE_SUB(reg) # 1 # bnode->reg = getreg(); printf("\tr%d = -r%d\n", bnode->reg, RIGHT_CHILD(bnode)->reg);
-reg: TYPE_ADD(reg, reg) # 1 # bnode->reg=getreg(); printf("\tr%d = r%d + r%d\n", bnode->reg, LEFT_CHILD(bnode)->reg, RIGHT_CHILD(bnode)->reg);
+reg: TYPE_ADD(reg, reg) # 1 # bnode->reg=LEFT_CHILD(bnode)->reg; printf("\tadd %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
 reg: TYPE_MUL(reg, reg) # 1 # bnode->reg=getreg(); printf("\tr%d = r%d * r%d\n", bnode->reg, LEFT_CHILD(bnode)->reg, RIGHT_CHILD(bnode)->reg);
-reg: VAR # 1 # bnode->reg=getreg(); printf("\tr%d = var %s\n", bnode->reg, bnode->name);
-reg: CONST # 1 # bnode->reg=getreg(); printf("\tr%d = cons %d\n", bnode->reg, bnode->const_num); 
-reg: constant # 1 # bnode->reg=getreg(); printf("\tr%d = cons %d\n", bnode->reg, bnode->const_num);
+reg: TYPE_VAR # 1 # bnode->reg=getreg(); printf("\tmovq %s, %s\n", toRegister(getregForVariable(bnode->name)), toRegister(bnode->reg));
+reg: TYPE_CONST # 1 # bnode->reg=getreg(); printf("\tmovq $%d, %s\n", bnode->const_num, toRegister(bnode->const_num)); 
+reg: constant # 1 # bnode->reg=getreg(); printf("\tmovq $%d, %s\n", bnode->const_num, toRegister(bnode->reg));
 constant: TYPE_ADD(constant, constant) # 0 # bnode->const_num = LEFT_CHILD(bnode)->const_num + RIGHT_CHILD(bnode)->const_num;
 constant: TYPE_MUL(constant, constant) # 0 # bnode->const_num = LEFT_CHILD(bnode)->const_num * RIGHT_CHILD(bnode)->const_num;
 constant: TYPE_CONST # 0 # bnode->const_num = bnode->const_num;
