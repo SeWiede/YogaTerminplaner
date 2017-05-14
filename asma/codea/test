@@ -1,4 +1,4 @@
 f(a, b)
- return ---a;
+ return 1+a;
 end;
 

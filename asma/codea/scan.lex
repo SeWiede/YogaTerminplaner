@@ -11,8 +11,8 @@ CC \)\*
 
 %{
 #include <math.h>
-#include "tree.h"
 #include "y.tab.h"
+#include "tree.h"
 %}
 
 %%
@@ -45,7 +45,8 @@ CC \)\*
 "not" return NOT;
 
 
-{ID}	 	{yylval.name = strdup(yytext); return ID;}
+{ID}	 	return ID;	@{@ID.name@ = strdup(yytext);@}
+
 {NUMBER} 	{	int i=0;
 				int j=0;
 				for(i,j;j<=yyleng;i++, j++){
@@ -54,10 +55,10 @@ CC \)\*
 						j++;
 					}
 				}
-				yylval.number = atoi(yytext);
+				yylval = atoi(yytext);
 				return NUMBER;
-				//printf("num %d\n", atoi(yytext));
-			}
+				@{@NUMBER.value@ = atoi(yytext);@}
+			} 
 [ _\n\r\t]
 .|\n exit(1);
 %%

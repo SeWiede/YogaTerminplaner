@@ -7,11 +7,11 @@
 #define PANIC printf
 #define STATE_LABEL(p) (p->state)
 
-enum type {TYPE_VAR=0, TYPE_CONST=1, TYPE_ADD=2, TYPE_SUB=3, TYPE_MUL=4, TYPE_ARRAY=5};
-typedef enum type Type;
+enum node_type {TYPE_VAR=0, TYPE_CONST=1, TYPE_ADD=2, TYPE_SUB=3, TYPE_MUL=4, TYPE_ARRAY=5};
+typedef enum node_type Nodetype;
 
 typedef struct tree {
-	Type type;
+	Nodetype type;
 	struct tree *child[2];
 	
  	int reg;
