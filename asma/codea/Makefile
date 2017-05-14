@@ -21,7 +21,7 @@ matcher.o: matcher.c tree.h
 
 
 parser: scan.lex matcher.o
-	flex scan.lex && yacc -d parser.codea.y && cc -g -c y.tab.c && cc -g -c lex.yy.c && cc -g -o codea lex.yy.o y.tab.o matcher.o -lfl
+	ox parser.codea.y scan.lex && yacc -d oxout.y && lex oxout.l && cc -g -c y.tab.c && cc -g -c lex.yy.c && cc -g -o codea lex.yy.o y.tab.o matcher.o -lfl
 
 clean: 
 	rm -f scanner lex.yy.c y.output parser y.tab.c y.tab.h matcher.brg matcher.c matcher.o y.tab.o lex.yy.o

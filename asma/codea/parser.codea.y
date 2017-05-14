@@ -24,7 +24,9 @@ Tree gen_node(Type type, Tree left, Tree right, int const_num, char *name){
 	LEFT_CHILD(t) = left;
 	RIGHT_CHILD(t) = right;
 	t->const_num = const_num;
-	t->name = strdup(name);
+	if(name != NULL) {
+		t->name = strdup(name);
+	}
 	return t;	
 }
 
@@ -40,10 +42,10 @@ Tree gen_node(Type type, Tree left, Tree right, int const_num, char *name){
 %start Program 
 %left PLUS MUL MINUS
 %token SEMICOLON BOPEN BCLOSE COMMA COLON EQU GREATER SQOPEN SQCLOSE MINUS PLUS MUL UNE END RETURN GOTO IF VAR AND NOT
-
+@traversal @postorder test
 %%
 
-Program: Funcdef SEMICOLON Program {printf("test");}
+Program: Funcdef SEMICOLON Program 
 	| 
 	;
 
@@ -61,8 +63,12 @@ mayPars: ID COMMA Pars
 Stats: RETURN Expr SEMICOLON { 
 						if(burm_label($2) ==0)
 							fprintf(stderr, "wrong\n");
-						else
-							burm_reduce($2, 1);};
+						else {
+							burm_reduce($2, 1);
+
+						}
+				};
+										
 
 
 Expr: Term {$$= $1;}
@@ -86,11 +92,11 @@ maymul: Term {$$ = $1;}
 mulExpr: Term MUL maymul {$$ =  gen_node(TYPE_MUL, $1, $3, 0, NULL);}
 	;
 
-mayminus: {$$ = NULL;}
-	| mayminus MINUS {$$ = gen_node(TYPE_SUB, $1, NULL, 0, NULL);}
+mayminus: Term {$$ = $1;}
+	| MINUS mayminus {$$ = gen_node(TYPE_SUB, $2, NULL, 0, NULL);}
 	;
 
-minusExpr: mayminus MINUS Term {$$ = gen_node(TYPE_SUB, $1, $3, 0, NULL);}
+minusExpr: MINUS mayminus {$$ = gen_node(TYPE_SUB, $2, NULL, 0, NULL);}
 	;
 
 
