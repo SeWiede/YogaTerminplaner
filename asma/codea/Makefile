@@ -18,11 +18,13 @@ matcher.c: matcher.brg
 	iburg matcher.brg > matcher.c
 matcher.o: matcher.c tree.h
 	gcc -c matcher.c
+util.o: util.c util.h
+	gcc -c util.c
 
 
-parser: scan.lex matcher.o
-	ox parser.y scan.lex && yacc -d oxout.y && lex oxout.l && cc -g -c y.tab.c && cc -g -c lex.yy.c && cc -g -o codea lex.yy.o y.tab.o matcher.o -lfl
+parser: scan.lex matcher.o util.o
+	ox parser.y scan.lex && yacc -d oxout.y && lex oxout.l && cc -g -c y.tab.c && cc -g -c lex.yy.c && cc -g -o codea lex.yy.o y.tab.o matcher.o util.o -lfl
 
 clean: 
-	rm -f codea oxout.y oxout.l lex.yy.c y.output parser y.tab.c y.tab.h matcher.brg matcher.c matcher.o y.tab.o lex.yy.o
+	rm -f codea oxout.y oxout.l lex.yy.c y.output parser y.tab.c y.tab.h matcher.brg matcher.c matcher.o y.tab.o lex.yy.o util.o
 

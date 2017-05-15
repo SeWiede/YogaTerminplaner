@@ -1,4 +1,8 @@
 f(a, b)
- return 1+a;
+ return a;
+end;
+
+d(a, c)
+ return a;
 end;
 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "tree.h"
+#include "util.h"
 
 void yyerror(const char *str){
 	fprintf(stderr, "error: %s\n", str);
@@ -14,6 +15,7 @@ int yywrap(){
 }
 
 
+int registers[15] = {0};
 
 main(){
 	yyparse();
@@ -31,17 +33,6 @@ Tree gen_node(Nodetype type, Tree left, Tree right, int const_num, char *name) {
 	return t;
 }
 
-typedef enum type{TYP_ANY = 0, VARIABLE = 1, LABEL = 2} Type;
-typedef enum occ{OCC_ANY =0, USE =1, DEF=2} Occurence;
-
-struct list {
-	char *name;
-	Type typ;
-	Occurence occ;
- 	struct list *next;
-};
-typedef struct list Name;
-typedef Name * NameList;
 
 NameList createList(char *name,  Occurence occ, Type typ, NameList next)
 {
@@ -128,10 +119,11 @@ int checkNames(NameList n){
 
 %token NUMBER ID SEMICOLON BOPEN BCLOSE COMMA COLON EQU GREATER SQOPEN SQCLOSE MINUS PLUS MUL UNE END RETURN GOTO IF VAR AND NOT
 
-@attributes {struct list * names;} Program Funcdef Pars  mayPars Labeldefs Labeldef Cond Lexpr andCond Cterm mayExpr beistrichExpr 
+@attributes {struct list * names;} Program Pars  mayPars Labeldefs Labeldef Cond Lexpr andCond Cterm mayExpr beistrichExpr 
 @attributes {char *name;} ID
 @attributes {struct list *names; Tree node;} Expr mayplus plusExpr maymul mulExpr mayminus minusExpr Term Stat Stats
 @attributes {int value;} NUMBER
+@attributes {struct list *names; Tree node; char *functionname; struct list *parnames;} Funcdef
 @traversal @lefttoright @postorder post
 @traversal @preorder pre
 %%
@@ -142,7 +134,29 @@ Program: Funcdef SEMICOLON Program
 		@Program.names@ = @Funcdef.names@;
 		//@post printList(@Program.names@); 
 		//@post printf("------------------------\n");
-		@post if(checkNames(@Program.names@) == 0) exit(3); 
+		@post if(checkNames(@Program.names@) == 0){ exit(3);}
+
+		@post{
+			populateParameters(@Funcdef.parnames@);
+		}
+
+		@post { 
+			printf(".globl %s\n", @Funcdef.functionname@);
+			printf(".type %s, %cfunction\n", @Funcdef.functionname@, 64);
+			printf("%s:\n", @Funcdef.functionname@);
+			//printf("\tpush %rbx\n \tpush %rbp\n \tpush %r12\n \tpush %r13\n \tpush %r14\n \tpush %r15\n");
+		}
+
+
+		
+		@post {
+			if(burm_label(@Funcdef.node@) == 0) {
+				fprintf(stderr, "burm_label error\n");
+			}
+			else {
+				burm_reduce(@Funcdef.node@, 1);
+			}
+		} 
 	@}
 	|
 	@{
@@ -155,21 +169,12 @@ Funcdef: ID BOPEN Pars BCLOSE Stats END
 		@e Funcdef.names : Pars.names Stats.names;
 		@Funcdef.names@ = concatList(@Stats.names@, @Pars.names@);
 		
-		@post { 
-			printf(".globl %s\n", @ID.name@);
-			printf(".type %s, %cfunction\n", @ID.name@, 64);
-			printf("%s:\n", @ID.name@);
-		}
+		@i @Funcdef.node@ = @Stats.node@;
 
-		@post {
-			if(burm_label(@Stats.node@) == 0) {
-				fprintf(stderr, "burm_label error\n");
-			}
-			else {
-				burm_reduce(@Stats.node@, 1);
-			}
-		}
+		@i @Funcdef.functionname@ = @ID.name@;
+		@i @Funcdef.parnames@ = @Pars.names@;
 
+		
 	@}	
 	;
 
@@ -217,6 +222,9 @@ Labeldefs:
 Stats:
 	@{
 		@i @Stats.names@ = NULL;
+enum regs {rax = 0, rbx, rcx, rdx, rsp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15};
+
+int registers[15] = {0};
 	
 		//TODO FIX HERE THIS IS ONLY SO PRINTING THE HEADER WORKS EASY FOR CODEA
 		@i @Stats.node@ = NULL;
@@ -482,7 +490,7 @@ Term: BOPEN Expr BCLOSE
 		@e Term.names : Term.1.names Expr.names;
 		@Term.names@ = concatList(@Expr.names@ , @Term.1.names@);
 
-		@i @Term.node@ = NULL;
+		@i @Term.node@ = gen_node(TYPE_ARRAY, @Term.1.node@, @Expr.node@, 0, NULL);
 	@}
 	| ID BOPEN beistrichExpr mayExpr BCLOSE
 	@{
