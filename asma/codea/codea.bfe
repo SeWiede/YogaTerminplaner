@@ -79,6 +79,9 @@ param: TYPE_VAR # 1 # bnode->reg=getregForVariable(bnode->name);
 reg: TYPE_ADD(param, reg) # 1# bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
 reg: TYPE_ADD(reg, param) # 1# bnode->reg=LEFT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
 array: TYPE_ARRAY(reg, reg) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+array: TYPE_ARRAY(param, reg) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+array: TYPE_ARRAY(reg, param) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+array: TYPE_ARRAY(param, param) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
 array: TYPE_ARRAY(reg, constant) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "%d(%s)", 8*RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg));
 array: TYPE_ARRAY(constant, reg) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "%d(,%s, 8)", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg));
 array: TYPE_ARRAY(constant, constant) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "%d(%s)", LEFT_CHILD(bnode)->const_num + RIGHT_CHILD(bnode)->const_num);
@@ -90,8 +93,8 @@ reg: TYPE_MUL(constant, reg) # 1 # MUL2_CONST_REG(bnode);
 reg: TYPE_MUL(reg, constant) # 1 # MUL2_REG_CONST(bnode);
 reg: TYPE_MUL(param, reg) # 1 # MUL2_NOFREE(bnode,1);
 reg: TYPE_MUL(reg, param) # 1 # MUL2_NOFREE(bnode,0);
-reg: TYPE_MUL(array, reg) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string);
+reg: TYPE_MUL(array, reg) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\timulq %s, %s\n", LEFT_CHILD(bnode)->array_string, toRegister(RIGHT_CHILD(bnode)->reg)); free(LEFT_CHILD(bnode)->array_string);
 reg: TYPE_MUL(reg, array) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string);
-reg: TYPE_MUL(array, array) # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", LEFT_CHILD(bnode)->array_string ,toRegister(bnode->reg)); printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(bnode->reg));free(LEFT_CHILD(bnode)->array_string);free(RIGHT_CHILD(bnode)->array_string);
+reg: TYPE_MUL(array, array) # 2 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", LEFT_CHILD(bnode)->array_string ,toRegister(bnode->reg)); printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(bnode->reg));free(LEFT_CHILD(bnode)->array_string);free(RIGHT_CHILD(bnode)->array_string);
 
 %%
