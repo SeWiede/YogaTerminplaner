@@ -19,7 +19,8 @@ static void MUL(Tree bnode){
 		printf("\tpush %rax\n");
 	if(rdxused != 1)
 		printf("\tpush %rdx\n"); 
-	printf("\tmovq %s, %rax\n", toRegister(LEFT_CHILD(bnode)->reg)); 
+	if(LEFT_CHILD(bnode)->reg != rax)
+		printf("\tmovq %s, %rax\n", toRegister(LEFT_CHILD(bnode)->reg)); 
 	printf("\timul %s\n", toRegister(RIGHT_CHILD(bnode)->reg)); 
 	printf("\tmovq %rax, %s\n", toRegister(bnode->reg)); 
 	if(rdxused != 1)
