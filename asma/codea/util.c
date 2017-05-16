@@ -81,8 +81,9 @@ int getreg(void){
 	int i=0;
 	for(i; i<16; i++) {
 		if(registers[i] == REG_FREE || registers[i] == REG_CALLEE_SAVED_FREE) {
-			if(isCalleeSaved(i) == 1 && registers[i] == REG_FREE)
-				printf("\tpush %s\n", toRegister(i));
+			if(isCalleeSaved(i) == 1 && registers[i] == REG_FREE){
+				printf("\tpush %s\n", toRegister(i));	
+			}
 			registers[i] = REG_USED;
 			return i;
 		}
@@ -112,8 +113,10 @@ void freeAllRegs(){
 int getregForVariable(char *var) {
 	int i;
 	for(i=0;i<6;i++){
-		if(parameters[i].parname == NULL)
+		if(parameters[i].parname == NULL){
+			printf("unvalid parameter\n");
 			exit(4);
+		}
 		if(strcmp(var, parameters[i].parname)==0)
 			return parameters[i].regno;	
 	}

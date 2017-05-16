@@ -385,21 +385,21 @@ mayplus: Term
 		
 		@i @mayplus.node@ = @Term.node@;
 	@}
-	| Term PLUS mayplus
+	| mayplus PLUS Term
 	@{
 		@e mayplus.names : Term.names mayplus.1.names;
 		@mayplus.names@ = concatList(@Term.names@, @mayplus.1.names@); 
 
-		@i @mayplus.0.node@ = gen_node(TYPE_ADD, @Term.node@, @mayplus.1.node@, 0, NULL);
+		@i @mayplus.0.node@ = gen_node(TYPE_ADD, @mayplus.1.node@,@Term.node@,  0, NULL);
 	@}
 	;
 
-plusExpr: Term PLUS mayplus
+plusExpr: mayplus PLUS Term
 	@{
 		@e plusExpr.names : Term.names mayplus.names;
 		@plusExpr.names@ = concatList(@Term.names@, @mayplus.names@);
 		
-		@i @plusExpr.node@ = gen_node(TYPE_ADD, @Term.node@, @mayplus.node@, 0, NULL);
+		@i @plusExpr.node@ = gen_node(TYPE_ADD, @mayplus.node@,@Term.node@,  0, NULL);
 	@}
 	;
 
@@ -409,21 +409,21 @@ maymul: Term
 
 		@i @maymul.node@ = @Term.node@;
 	@}
-	| Term MUL maymul
+	| maymul MUL Term
 	@{
 		@e maymul.0.names : Term.names maymul.1.names;
 		@maymul.0.names@ = concatList(@Term.names@, @maymul.1.names@);
 
-		@i @maymul.0.node@ = gen_node(TYPE_MUL, @Term.node@, @maymul.1.node@, 0, NULL);
+		@i @maymul.0.node@ = gen_node(TYPE_MUL, @maymul.1.node@, @Term.node@, 0, NULL);
 	@}
 	;
 
-mulExpr: Term MUL maymul
+mulExpr: maymul MUL Term
 	@{
 		@e mulExpr.names : Term.names maymul.names;
 		@mulExpr.names@ = concatList(@Term.names@, @maymul.names@);
 
-		@i @mulExpr.node@ = gen_node(TYPE_MUL, @Term.node@, @maymul.node@, 0, NULL);
+		@i @mulExpr.node@ = gen_node(TYPE_MUL, @maymul.node@, @Term.node@, 0, NULL);
 	@}
 	;
 

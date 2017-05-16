@@ -18,7 +18,8 @@ typedef struct tree {
  	int reg;
 	int const_num;
 	char *name;
-	
+
+	char *array_string;	
 	struct burm_state *state;
 } *NODEPTR_TYPE, *Tree;
 
