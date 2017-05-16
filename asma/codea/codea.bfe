@@ -55,5 +55,7 @@ reg: TYPE_ADD(left, reg) # 1# bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\tadd 
 
 left: TYPE_VAR # 1 # bnode->reg=getregForVariable(bnode->name);
 
-
+reg: TYPE_ARRAY(reg, constant) # 1 # bnode->reg = getreg(); printf("\tmovq %d(%s), %s\n", 8*RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg), toRegister(bnode->reg));
+reg: TYPE_ARRAY(constant, reg) # 1 # bnode->reg = getreg(); printf("\tmovq %d(,%s, 8), %s\n", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg), toRegister(bnode->reg));
+reg: TYPE_ARRAY(constant, constant) # 1 # bnode->reg = getreg(); printf("\tmovq %d, %s\n", LEFT_CHILD(bnode)->const_num + RIGHT_CHILD(bnode)->const_num, toRegister(bnode->reg));
 %%
