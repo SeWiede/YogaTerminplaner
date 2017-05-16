@@ -9,10 +9,12 @@ struct parameters{
 	int regno;
 }parameters[6];
 
-int registers[15];
+enum REG_STATUS{REG_FREE =0, REG_USED, REG_PARAM_USED, REG_CALLEE_SAVED_FREE};
+
+
+static int registers[16] = {0};
 int parnums[] = {4, 3, 2, 1, 5, 6};
 
-enum regs {rax = 0, rcx, rdx, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15, rbx, rbp, rsp};
 
 void populateParameters(NameList par){
 	int i;
@@ -21,7 +23,7 @@ void populateParameters(NameList par){
 		if(par->name != NULL) {
 			parameters[i].parname = par->name;
 			parameters[i].regno = parnums[i];
-			registers[parnums[i]] = 1;
+			registers[parnums[i]] = REG_PARAM_USED;
 			par = par->next;
 		}
 	}	
@@ -77,11 +79,11 @@ int isCalleeSaved(int regno){
 
 int getreg(void){
 	int i=0;
-	for(i; i<15; i++) {
-		if(registers[i] == 0) {
-			registers[i] = 1;
-			if(isCalleeSaved(i) == 1)
+	for(i; i<16; i++) {
+		if(registers[i] == REG_FREE || registers[i] == REG_CALLEE_SAVED_FREE) {
+			if(isCalleeSaved(i) == 1 && registers[i] == REG_FREE)
 				printf("\tpush %s\n", toRegister(i));
+			registers[i] = REG_USED;
 			return i;
 		}
 	}
@@ -90,23 +92,20 @@ int getreg(void){
 }
 
 void freeReg(int regno) {
-	if(registers[regno] == 1) {
-		if(isCalleeSaved(regno) == 1)
-			printf("\tpop %s\n", toRegister(regno));
-		registers[regno] = 0;
-	}
-	else {
-		printf("Register already freed");
-		exit(4);
+	if(registers[regno] == REG_USED) {
+		if(isCalleeSaved(regno))
+			registers[regno] = REG_CALLEE_SAVED_FREE;	
+		else
+			registers[regno] = REG_FREE;
 	}
 }
 
 void freeAllRegs(){
 	int i;
-	for(i=14; i >=0 ;i--){
-		if(registers[i] == 1 && isCalleeSaved(i) == 1)
+	for(i=15; i >=0 ;i--){
+		if(registers[i] > REG_FREE && isCalleeSaved(i) == 1)
 			printf("\tpop %s\n", toRegister(i));
-		registers[i] = 0;
+		registers[i] = REG_FREE;
 	}
 }
 

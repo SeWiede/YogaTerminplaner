@@ -121,8 +121,9 @@ int checkNames(NameList n){
 
 @attributes {struct list * names;} Program Pars  mayPars Labeldefs Labeldef Cond Lexpr andCond Cterm mayExpr beistrichExpr 
 @attributes {char *name;} ID
-@attributes {struct list *names; Tree node;} Expr mayplus plusExpr maymul mulExpr mayminus minusExpr Term Stat Stats
+@attributes {struct list *names; Tree node;} Expr mayplus plusExpr maymul mulExpr minusExpr Term Stat Stats
 @attributes {int value;} NUMBER
+@attributes {int neg; struct list *names; Tree node;} mayminus
 @attributes {struct list *names; Tree node; char *functionname; struct list *parnames;} Funcdef
 @traversal @lefttoright @postorder post
 @traversal @preorder pre
@@ -222,9 +223,6 @@ Labeldefs:
 Stats:
 	@{
 		@i @Stats.names@ = NULL;
-enum regs {rax = 0, rbx, rcx, rdx, rsp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15};
-
-int registers[15] = {0};
 	
 		//TODO FIX HERE THIS IS ONLY SO PRINTING THE HEADER WORKS EASY FOR CODEA
 		@i @Stats.node@ = NULL;
@@ -435,13 +433,15 @@ mayminus: Term
 		@mayminus.names@ = @Term.names@;
 
 		@i @mayminus.node@ = @Term.node@;
+		@i @mayminus.neg@ = 1;
 	@} 
 	| MINUS mayminus
 	@{
 		@e mayminus.0.names : mayminus.1.names;
 		@mayminus.0.names@ = @mayminus.1.names@;
 
-		@i @mayminus.0.node@ = gen_node(TYPE_SUB, @mayminus.1.node@, NULL, 0, NULL);
+		@i @mayminus.0.node@ = @mayminus.1.node@;
+		@i @mayminus.0.neg@ = !@mayminus.1.neg@;
 	@}
 	;
 
@@ -450,7 +450,12 @@ minusExpr: MINUS mayminus
 		@e minusExpr.names : mayminus.names;
 		@minusExpr.names@ = @mayminus.names@;
 
-		@i @minusExpr.node@ = gen_node(TYPE_SUB, @mayminus.node@, NULL, 0, NULL);
+		@e minusExpr.node: mayminus.node mayminus.neg;
+		 {
+			@minusExpr.node@ = @mayminus.node@;
+			if(@mayminus.neg@ == 1) 
+				@minusExpr.node@ = gen_node(TYPE_SUB, @mayminus.node@, NULL, 0, NULL);
+		}
 	@}
 	;
 

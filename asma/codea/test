@@ -1,8 +1,3 @@
-f(a, b)
- return a;
+f(a)
+ return (a*2);
 end;
-
-d(a, c)
- return a;
-end;
-

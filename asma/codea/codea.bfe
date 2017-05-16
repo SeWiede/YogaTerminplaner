@@ -6,16 +6,40 @@
 #include "util.h"
 
 
+static void MUL(Tree bnode){
+	int raxused = checkRegister(rax);
+	int rdxused = checkRegister(rdx);
 
+	if(RIGHT_CHILD(bnode)->reg != rdx) 
+		bnode->reg=RIGHT_CHILD(bnode)->reg; 
+	else
+		bnode->reg=getreg();
+
+	if(raxused != 1)
+		printf("\tpush %rax\n");
+	if(rdxused != 1)
+		printf("\tpush %rdx\n"); 
+	printf("\tmovq %s, %rax\n", toRegister(LEFT_CHILD(bnode)->reg)); 
+	printf("\timul %s\n", toRegister(RIGHT_CHILD(bnode)->reg)); 
+	printf("\tmovq %rax, %s\n", toRegister(bnode->reg)); 
+	if(rdxused != 1)
+		printf("\tpop %rdx\n");
+	 if(raxused != 1)
+		printf("\tpop %rax\n"); 
+	
+
+	freeReg(LEFT_CHILD(bnode)->reg);
+
+}
 %}
 
 %term TYPE_VAR=0 TYPE_CONST=1 TYPE_ADD=2 TYPE_SUB=3 TYPE_MUL=4 TYPE_ARRAY=5
 %start Stats
 %%
-Stats: reg	# 1 # printf("\tmovq %s, %rax\n", toRegister(bnode->reg));/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeAllRegs(); printf("\tret\n"); 
+Stats: reg	# 1 #if(bnode->reg != rax) printf("\tmovq %s, %rax\n", toRegister(bnode->reg));/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeAllRegs(); printf("\tret\n"); 
 reg: TYPE_SUB(reg) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\tneg %s\n", toRegister(LEFT_CHILD(bnode)->reg));
-reg: TYPE_ADD(reg, reg) # 1 # bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\tadd %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
-reg: TYPE_MUL(reg, reg) # 1 # bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\tpush %rax\n"); printf("\tpush %rdx\n"); printf("\tmovq %s, %rax\n", toRegister(LEFT_CHILD(bnode)->reg)); printf("\timul %s\n", toRegister(RIGHT_CHILD(bnode)->reg)); printf("\tmovq %rax, %s\n", toRegister(RIGHT_CHILD(bnode)->reg)); printf("\tpop %rdx\n"); printf("\tpop %rax\n");
+reg: TYPE_ADD(reg, reg) # 1 # bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\tadd %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg)); freeReg(LEFT_CHILD(bnode)->reg);
+reg: TYPE_MUL(reg, reg) # 1 # MUL(bnode);
 reg: TYPE_VAR # 1 # bnode->reg=getreg(); printf("\tmovq %s, %s\n", toRegister(getregForVariable(bnode->name)), toRegister(bnode->reg));
 reg: TYPE_CONST # 1 # bnode->reg=getreg(); printf("\tmovq $%d, %s\n", bnode->const_num, toRegister(bnode->reg)); 
 reg: constant # 1 # bnode->reg=getreg(); printf("\tmovq $%d, %s\n", bnode->const_num, toRegister(bnode->reg));
@@ -24,4 +48,12 @@ constant: TYPE_MUL(constant, constant) # 0 # bnode->const_num = LEFT_CHILD(bnode
 constant: TYPE_CONST # 0 # bnode->const_num = bnode->const_num;
 constant: TYPE_SUB(constant)  # 0 # bnode->const_num = -LEFT_CHILD(bnode)->const_num;
 reg: TYPE_ARRAY(reg, reg) # 1 # bnode->reg = getreg(); printf("\tmovq 0(%s, %s, 8), %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg), toRegister(bnode->reg));
+reg: TYPE_ADD(reg, constant) # 1 # bnode->reg=LEFT_CHILD(bnode)->reg; printf("\tadd $%d, %s\n", RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg));
+reg: TYPE_ADD(constant, reg) # 1 #  bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\tadd $%d, %s\n", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg));
+
+reg: TYPE_ADD(left, reg) # 1# bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\tadd %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+
+left: TYPE_VAR # 1 # bnode->reg=getregForVariable(bnode->name);
+
+
 %%
