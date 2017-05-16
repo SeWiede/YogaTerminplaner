@@ -21,9 +21,14 @@ static void MUL2(Tree bnode) {
 	freeReg(LEFT_CHILD(bnode)->reg);
 }
 
-static void MUL2_NOFREE(Tree bnode) {
-	bnode->reg=RIGHT_CHILD(bnode)->reg;
-	printf("\timulq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+static void MUL2_NOFREE(Tree bnode, int param) {
+	if(param){
+		bnode->reg=RIGHT_CHILD(bnode)->reg;
+		printf("\timulq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+	}else{
+		bnode->reg=LEFT_CHILD(bnode)->reg;
+		printf("\timulq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
+	}
 }
 
 static void MUL(Tree bnode){
@@ -70,8 +75,9 @@ constant: TYPE_CONST # 0 # bnode->const_num = bnode->const_num;
 constant: TYPE_SUB(constant)  # 0 # bnode->const_num = -LEFT_CHILD(bnode)->const_num;
 reg: TYPE_ADD(reg, constant) # 1 # bnode->reg=LEFT_CHILD(bnode)->reg; printf("\taddq $%d, %s\n", RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg));
 reg: TYPE_ADD(constant, reg) # 1 #  bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\taddq $%d, %s\n", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg));
-left: TYPE_VAR # 1 # bnode->reg=getregForVariable(bnode->name);
-reg: TYPE_ADD(left, reg) # 1# bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+param: TYPE_VAR # 1 # bnode->reg=getregForVariable(bnode->name);
+reg: TYPE_ADD(param, reg) # 1# bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+reg: TYPE_ADD(reg, param) # 1# bnode->reg=LEFT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
 array: TYPE_ARRAY(reg, reg) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
 array: TYPE_ARRAY(reg, constant) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "%d(%s)", 8*RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg));
 array: TYPE_ARRAY(constant, reg) # 1 # bnode->array_string = malloc(50); sprintf(bnode->array_string, "%d(,%s, 8)", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg));
@@ -82,7 +88,8 @@ reg: TYPE_ADD(array, array) # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n
 reg: array # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", bnode->array_string, toRegister(bnode->reg)); free(bnode->array_string);
 reg: TYPE_MUL(constant, reg) # 1 # MUL2_CONST_REG(bnode);
 reg: TYPE_MUL(reg, constant) # 1 # MUL2_REG_CONST(bnode);
-reg: TYPE_MUL(left, reg) # 1 # MUL2_NOFREE(bnode);
+reg: TYPE_MUL(param, reg) # 1 # MUL2_NOFREE(bnode,1);
+reg: TYPE_MUL(reg, param) # 1 # MUL2_NOFREE(bnode,0);
 reg: TYPE_MUL(array, reg) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string);
 reg: TYPE_MUL(reg, array) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string);
 reg: TYPE_MUL(array, array) # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", LEFT_CHILD(bnode)->array_string ,toRegister(bnode->reg)); printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(bnode->reg));free(LEFT_CHILD(bnode)->array_string);free(RIGHT_CHILD(bnode)->array_string);
