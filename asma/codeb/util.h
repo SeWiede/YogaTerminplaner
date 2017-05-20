@@ -30,6 +30,7 @@ int getregForVariable(char *var);
 int getregForNewVariable(char *var, int regno);
 
 void freeReg(int regno);
-void freeAllRegs();
+void freeAllRegs(void);
 
+char *genLabel(void);
 #endif

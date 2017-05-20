@@ -119,9 +119,9 @@ int checkNames(NameList n){
 
 %token NUMBER ID SEMICOLON BOPEN BCLOSE COMMA COLON EQU GREATER SQOPEN SQCLOSE MINUS PLUS MUL UNE END RETURN GOTO IF VAR AND NOT
 
-@attributes {struct list * names;} Program Pars  mayPars Labeldefs Labeldef Cond andCond Cterm mayExpr beistrichExpr 
+@attributes {struct list * names;} Program Pars  mayPars  mayExpr beistrichExpr  
 @attributes {char *name;} ID
-@attributes {struct list *names; Tree node;} Lexpr Expr mayplus plusExpr maymul mulExpr minusExpr Term Stat Stats
+@attributes {struct list *names; Tree node;} Lexpr Expr mayplus plusExpr maymul mulExpr minusExpr Term Stat Stats Labeldefs Labeldef Cond Cterm andCond
 @attributes {int value;} NUMBER
 @attributes {int neg; struct list *names; Tree node;} mayminus
 @attributes {struct list *names; Tree node; char *functionname; struct list *parnames;} Funcdef
@@ -202,21 +202,15 @@ mayPars: ID COMMA Pars
 	@}
 	;
 
-Labeldef: ID COLON
+Labeldefs: ID COLON
 	@{
-		@e Labeldef.names : ID.name;
-		@Labeldef.names@ = createList(@ID.name@, DEF, LABEL, NULL);
+		@i @Labeldefs.names@ = createList(@ID.name@, DEF, LABEL, NULL);
+		@i @Labeldefs.node@ = gen_node(TYPE_LABEL, NULL, NULL, 0, @ID.name@);
 	@}
-	;
-
-Labeldefs: 
+	| Labeldefs ID COLON	
 	@{
-		@i @Labeldefs.names@ = NULL;
-	@}
-	| Labeldefs Labeldef	
-	@{
-		@e Labeldefs.names : Labeldefs.1.names Labeldef.names;
-		@Labeldefs.names@ = concatList(@Labeldefs.1.names@, @Labeldef.names@);
+		@i @Labeldefs.names@ = concatList(@Labeldefs.1.names@, createList(@ID.name@, DEF, LABEL, NULL));
+		@i @Labeldefs.node@ = gen_node(TYPE_LABEL, @Labeldefs.1.node@, NULL, 0, @ID.name@);
 	@}
 	;
 
@@ -224,16 +218,28 @@ Stats: Labeldefs Stat SEMICOLON
 	@{
 		@i @Stats.names@ = @Stat.names@;
 	
-		//TODO FIX HERE THIS IS ONLY SO PRINTING THE HEADER WORKS EASY FOR CODEA
-		@i @Stats.node@ = @Stat.node@;
+		@i @Stats.node@ = gen_node(TYPE_STATEMENTS, @Labeldefs.node@, @Stat.node@, 0, NULL);
+	@}
+	| Stat SEMICOLON
+	@{
+		@i @Stats.names@ = @Stat.names@;
+	
+		@i @Stats.node@ =  @Stat.node@;
 	@}
 	| Stats Labeldefs Stat SEMICOLON
 	@{
 		@e Stats.names : Stats.1.names Labeldefs.names Stat.names;
 		@Stats.names@ = concatList(concatList(@Stat.names@, @Labeldefs.names@), @Stats.1.names@);
 
+		@i @Stats.0.node@ = gen_node(TYPE_STATEMENTS, 
+								gen_node(TYPE_STATEMENTS, @Stats.1.node@, @Labeldefs.node@, 0, NULL), 
+													@Stat.node@, 0, NULL);
+	@}
+	| Stats Stat SEMICOLON
+	@{
+		@e Stats.names : Stats.1.names Stat.names;
+		@Stats.names@ = concatList(@Stat.names@, @Stats.1.names@);
 
-		//TODO FIX HERE THIS IS ONLY SO PRINTING THE HEADER WORKS EASY FOR CODEA
 		@i @Stats.0.node@ = gen_node(TYPE_STATEMENTS, @Stats.1.node@, @Stat.node@, 0, NULL);
 	@}
 	;
@@ -251,14 +257,14 @@ Stat: RETURN Expr
 		@e Stat.names : ID.name;
 		@Stat.names@ = createList(@ID.name@, USE, LABEL, NULL);
 
-		@i @Stat.node@ = NULL;
+		@i @Stat.node@ = gen_node(TYPE_GOTO, NULL, NULL, 0, @ID.name@);
 	@}
 	| IF Cond GOTO ID
 	@{
 		@e Stat.names : Cond.names ID.name;
 		@Stat.names@ = createList(@ID.name@, USE, LABEL, @Cond.names@);//concat+ create?
 
-		@i @Stat.node@ = NULL;
+		@i @Stat.node@ = gen_node(TYPE_IF, @Cond.node@, NULL, 0, @ID.name@);
 	@}
 	| Lexpr EQU Expr
 	@{
@@ -278,31 +284,40 @@ Stat: RETURN Expr
 	@{
 		@e Stat.names : Term.names;
 		@Stat.names@ = @Term.names@; 
-
-		@i @Stat.node@ = NULL;
+//prep for codec, Term stats wont generate assembler code in codeb
+		@i @Stat.node@ = gen_node(TYPE_TERM, @Term.node@,  NULL, 0, NULL);
 	@}
 	;
 
-andCond: 
+andCond: Cterm
 	@{
-		@i @andCond.names@ = NULL;
+		@e andCond.names : Cterm.names;
+		@andCond.names@ = @Cterm.names@;
+	
+		@i @andCond.node@ = @Cterm.node@;	
 	@}
-	| AND Cterm andCond
+	| andCond AND Cterm
 	@{
-		@e andCond.names : Cterm.names andCond.1.names;
+		@e andCond.names : andCond.1.names Cterm.names;
 		@andCond.names@ = concatList(@Cterm.names@, @andCond.1.names@);
+	
+		@i @andCond.node@ = gen_node(TYPE_AND, @andCond.1.node@, @Cterm.node@, 0, NULL);	
 	@}
 	;
 
-Cond: Cterm andCond
+Cond: andCond 
 	@{
-		@e Cond.names : Cterm.names andCond.names;
-		@Cond.names@ = concatList(@Cterm.names@, @andCond.names@);
+		@e Cond.names : andCond.names;
+		@Cond.names@ = @andCond.names@;
+
+		@i @Cond.node@ = @andCond.node@;	
 	@}
 	| NOT Cterm
 	@{
 		@e Cond.names : Cterm.names;
 		@Cond.names@  = @Cterm.names@;
+		
+		@i @Cond.node@ = gen_node(TYPE_NOT, @Cterm.node@, NULL, 0, NULL);;
 	@}
 	;
 	
@@ -310,16 +325,22 @@ Cterm: BOPEN Cond BCLOSE
 	@{
 		@e Cterm.names : Cond.names;
 		@Cterm.names@ = @Cond.names@;
+	
+		@i @Cterm.node@	= @Cond.node@;
 	@}
 	| Expr UNE Expr
 	@{
-	    @e Cterm.names : Expr.names Expr.1.names;
-		@Cterm.names@ = concatList(@Expr.names@, @Expr.1.names@);
+	    @e Cterm.names : Expr.0.names Expr.1.names;
+		@Cterm.names@ = concatList(@Expr.0.names@, @Expr.1.names@);
+		
+		@i @Cterm.node@	= gen_node(TYPE_UNE, @Expr.0.node@, @Expr.1.node@, 0, NULL);
 	@}
 	| Expr GREATER Expr
 	@{
-		@e Cterm.names : Expr.names Expr.1.names;
-		@Cterm.names@ = concatList(@Expr.names@, @Expr.1.names@);
+		@e Cterm.names : Expr.0.names Expr.1.names;
+		@Cterm.names@ = concatList(@Expr.0.names@, @Expr.1.names@);
+	
+		@i @Cterm.node@	= gen_node(TYPE_GREATER, @Expr.0.node@, @Expr.1.node@, 0, NULL);	
 	@}
 
 	;

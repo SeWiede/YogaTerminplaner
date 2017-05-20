@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+static unsigned int labelcounter=0;
+
 struct parameters{
 	char *parname;
 	int regno;
@@ -143,4 +146,11 @@ int getregForNewVariable(char *var, int regno) {
 	addvar(regno, var);
 
 	return regno;
+}
+
+
+char *genLabel(void){
+	char * ret = (char*) malloc(30*sizeof(char));;
+	sprintf(ret, "wr%d", labelcounter++);
+	return ret;	
 }
