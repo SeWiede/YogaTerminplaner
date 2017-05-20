@@ -14,11 +14,47 @@ int yywrap(){
 	return 1;
 }
 
+int labelID=1;
 
 int registers[15] = {0};
 
 main(){
 	yyparse();
+}
+
+
+int gen_label() {
+	return labelID++;
+}
+
+int oberfalselabel = 0;
+
+Tree notLabels(Tree start) {
+    start->notLabels = !(start->notLabels);	
+	if(RIGHT_CHILD(start) != NULL) {
+		RIGHT_CHILD(start)=notLabels(RIGHT_CHILD(start));
+	}
+	if(LEFT_CHILD(start) != NULL) {
+		LEFT_CHILD(start) = notLabels(LEFT_CHILD(start));
+	}
+
+	return start;
+}
+
+Tree gen_node_cond(Nodetype type, Tree left, Tree right, int const_num, char *name, int tl, int fl) {
+	Tree t = malloc(sizeof(struct tree));
+	OP_LABEL(t) = type;
+	LEFT_CHILD(t) = left;
+	RIGHT_CHILD(t) = right;
+	t->truelabel = tl;
+	t->falselabel = fl;
+	t->const_num = const_num;
+	t->notLabels = 0;
+	if(name != NULL) {
+		t->name = strdup(name);
+	}
+	
+	return t;
 }
 
 Tree gen_node(Nodetype type, Tree left, Tree right, int const_num, char *name) {
@@ -30,6 +66,7 @@ Tree gen_node(Nodetype type, Tree left, Tree right, int const_num, char *name) {
 	if(name != NULL) {
 		t->name = strdup(name);
 	}
+	
 	return t;
 }
 
@@ -264,7 +301,9 @@ Stat: RETURN Expr
 		@e Stat.names : Cond.names ID.name;
 		@Stat.names@ = createList(@ID.name@, USE, LABEL, @Cond.names@);//concat+ create?
 
-		@i @Stat.node@ = gen_node(TYPE_IF, @Cond.node@, NULL, 0, @ID.name@);
+
+		@i @Stat.node@ = gen_node_cond(TYPE_IF, @Cond.node@, NULL, 0, @ID.name@, 0, oberfalselabel);
+		oberfalselabel = gen_label();
 	@}
 	| Lexpr EQU Expr
 	@{
@@ -317,7 +356,7 @@ Cond: andCond
 		@e Cond.names : Cterm.names;
 		@Cond.names@  = @Cterm.names@;
 		
-		@i @Cond.node@ = gen_node(TYPE_NOT, @Cterm.node@, NULL, 0, NULL);
+		@i @Cond.node@ = notLabels(@Cterm.node@);
 	@}
 	;
 	
@@ -333,14 +372,14 @@ Cterm: BOPEN Cond BCLOSE
 	    @e Cterm.names : Expr.0.names Expr.1.names;
 		@Cterm.names@ = concatList(@Expr.0.names@, @Expr.1.names@);
 		
-		@i @Cterm.node@	= gen_node(TYPE_UNE, @Expr.0.node@, @Expr.1.node@, 0, NULL);
+		@i @Cterm.node@	= gen_node_cond(TYPE_UNE, @Expr.0.node@, @Expr.1.node@, 0, NULL, gen_label(), oberfalselabel);
 	@}
 	| Expr GREATER Expr
 	@{
 		@e Cterm.names : Expr.0.names Expr.1.names;
 		@Cterm.names@ = concatList(@Expr.0.names@, @Expr.1.names@);
 	
-		@i @Cterm.node@	= gen_node(TYPE_GREATER, @Expr.0.node@, @Expr.1.node@, 0, NULL);	
+		@i @Cterm.node@	= gen_node_cond(TYPE_GREATER, @Expr.0.node@, @Expr.1.node@, 0, NULL, gen_label(), oberfalselabel);	
 	@}
 
 	;

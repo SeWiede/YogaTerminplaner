@@ -84,69 +84,40 @@ void printLabels(Tree bnode){
 	}
 }
 
+int getCorrectTrueLabel(Tree bnode) {
+	if(bnode->notLabels == 1) {
+		return bnode->falselabel;
+	}
+	return bnode->truelabel;
+}
 
-void GREATER(Tree bnode){	
-	bnode->reg=LEFT_CHILD(bnode)->reg;
-	char * trueLabel = genLabel();
-	char * endLabel = genLabel();
+int getCorrectFalseLabel(Tree bnode) {
+	if(bnode->notLabels == 1) {
+		return bnode->truelabel;
+	}
+	return bnode->falselabel;
+}
 
+void GREATER(Tree bnode){
 	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
-	printf("\tjg %s\n", trueLabel);
-	printf("\tmov $0, %s\n", toRegister(bnode->reg));	
-	printf("\tjmp %s\n", endLabel);
-
-
-	printf("%s:\n", trueLabel);//truelabel
-	printf("\tmov $1, %s\n", toRegister(bnode->reg));
-	printf("%s:\n", endLabel);//endlabel
-
-	free(trueLabel); free(endLabel);freeReg(RIGHT_CHILD(bnode)->reg);
+	printf("\tjg label%d\n", getCorrectTrueLabel(bnode));
+	printf("\tjmp label%d\n", getCorrectFalseLabel(bnode));
+	printf("label%d:\n", bnode->truelabel);
+	freeReg(RIGHT_CHILD(bnode)->reg);
 }
 
-void UNE(Tree bnode){	
-	bnode->reg=LEFT_CHILD(bnode)->reg;
-	char * trueLabel = genLabel();
-	char * endLabel = genLabel();
-
-	printf("\tcmp %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
-	printf("\tjne %s\n", trueLabel);
-	printf("\tmov $0, %s\n", toRegister(bnode->reg));	
-	printf("\tjmp %s\n", endLabel);
-
-
-	printf("%s:\n", trueLabel);//truelabel
-	printf("\tmov $1, %s\n", toRegister(bnode->reg));
-	printf("%s:\n", endLabel);//endlabel
-
-	free(trueLabel); free(endLabel);freeReg(RIGHT_CHILD(bnode)->reg);
+void UNE(Tree bnode){
+	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
+	printf("\tjne label%d\n", getCorrectTrueLabel(bnode));
+	printf("\tjmp label%d\n", getCorrectFalseLabel(bnode));
+	printf("label%d:\n", bnode->truelabel);
+	freeReg(RIGHT_CHILD(bnode)->reg);
 }
 
-void NOT(Tree bnode){	
-	printf("\tbtc $0, %s\n", toRegister(bnode->reg));
-}
-
-void AND(Tree bnode){	
-	bnode->reg=RIGHT_CHILD(bnode)->reg;
-	char * trueLabel = genLabel();
-	char * endLabel = genLabel();
-
-	printf("\ttest %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
-	printf("\tjne %s\n", trueLabel);
-	printf("\tmov $0, %s\n", toRegister(bnode->reg));	
-	printf("\tjmp %s\n", endLabel);
-
-
-	printf("%s:\n", trueLabel);//truelabel
-	printf("\tmov $1, %s\n", toRegister(bnode->reg));
-	printf("%s:\n", endLabel);//endlabel
-
-	free(trueLabel); free(endLabel);freeReg(LEFT_CHILD(bnode)->reg);
-}
 
 void IF(Tree bnode){
-	printf("\tcmp $1, %s\n", toRegister(LEFT_CHILD(bnode)->reg));
-	printf("\tje %s\n", bnode->name);
-	//else passt
+	printf("\tjmp %s\n", bnode->name);
+	printf("label%d:\n", bnode->falselabel);
 }
 
 %}
@@ -165,7 +136,7 @@ stat: TYPE_ASSIGN(reg, reg) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHI
 stat: TYPE_ASSIGN(array, reg) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), LEFT_CHILD(bnode)->array_string); free(LEFT_CHILD(bnode)->array_string);
 stat: TYPE_ASSIGN(reg, array) # 1 # printf("\tmovq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string);
 stat: TYPE_ASSIGN(array, array) # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(bnode->reg)); printf("\tmovq %s, %s\n", toRegister(bnode->reg), LEFT_CHILD(bnode)->array_string); free(LEFT_CHILD(bnode)->array_string); free(RIGHT_CHILD(bnode)->array_string); freeReg(bnode->reg);
-stat: TYPE_IF(cond) # 1 # IF(bnode);
+stat: TYPE_IF(cond) # 0 # IF(bnode) ;
 stat: TYPE_TERM # 1 # //nothing yet
 stat: TYPE_GOTO # 1 # printf("\tjmp %s\n", bnode->name);
 reg: TYPE_SUB(reg) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\tneg %s\n", toRegister(LEFT_CHILD(bnode)->reg));
@@ -211,6 +182,5 @@ g_cond: TYPE_GREATER(reg, reg) # 1 # GREATER(bnode);
 u_cond: TYPE_UNE(reg, reg) # 1 # UNE(bnode);
 cond: g_cond # 2 #
 cond: u_cond # 2 # 
-cond: TYPE_AND(cond,cond) # 1 # AND(bnode);
-cond: TYPE_NOT(cond) # 1 # NOT(bnode);
+cond: TYPE_AND(cond,cond) # 1 # 
 %%

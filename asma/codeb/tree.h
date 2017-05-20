@@ -19,7 +19,12 @@ typedef struct tree {
 	int const_num;
 	char *name;
 
-	char *array_string;	
+	char *array_string;
+
+	int truelabel;
+	int falselabel;
+
+	int notLabels;	
 	struct burm_state *state;
 } *NODEPTR_TYPE, *Tree;
 
