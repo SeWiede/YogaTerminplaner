@@ -86,7 +86,7 @@ void printLabels(Tree bnode){
 
 
 void GREATER(Tree bnode){	
-	bnode->reg=getreg();
+	bnode->reg=LEFT_CHILD(bnode)->reg;
 	char * trueLabel = genLabel();
 	char * endLabel = genLabel();
 
@@ -100,11 +100,11 @@ void GREATER(Tree bnode){
 	printf("\tmov $1, %s\n", toRegister(bnode->reg));
 	printf("%s:\n", endLabel);//endlabel
 
-	free(trueLabel); free(endLabel);
+	free(trueLabel); free(endLabel);freeReg(RIGHT_CHILD(bnode)->reg);
 }
 
 void UNE(Tree bnode){	
-	bnode->reg=getreg();
+	bnode->reg=LEFT_CHILD(bnode)->reg;
 	char * trueLabel = genLabel();
 	char * endLabel = genLabel();
 
@@ -118,9 +118,30 @@ void UNE(Tree bnode){
 	printf("\tmov $1, %s\n", toRegister(bnode->reg));
 	printf("%s:\n", endLabel);//endlabel
 
-	free(trueLabel); free(endLabel);
+	free(trueLabel); free(endLabel);freeReg(RIGHT_CHILD(bnode)->reg);
 }
 
+void NOT(Tree bnode){	
+	printf("\tbtc $0, %s\n", toRegister(bnode->reg));
+}
+
+void AND(Tree bnode){	
+	bnode->reg=RIGHT_CHILD(bnode)->reg;
+	char * trueLabel = genLabel();
+	char * endLabel = genLabel();
+
+	printf("\ttest %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+	printf("\tjne %s\n", trueLabel);
+	printf("\tmov $0, %s\n", toRegister(bnode->reg));	
+	printf("\tjmp %s\n", endLabel);
+
+
+	printf("%s:\n", trueLabel);//truelabel
+	printf("\tmov $1, %s\n", toRegister(bnode->reg));
+	printf("%s:\n", endLabel);//endlabel
+
+	free(trueLabel); free(endLabel);freeReg(LEFT_CHILD(bnode)->reg);
+}
 
 void IF(Tree bnode){
 	printf("\tcmp $1, %s\n", toRegister(LEFT_CHILD(bnode)->reg));
@@ -190,11 +211,6 @@ g_cond: TYPE_GREATER(reg, reg) # 1 # GREATER(bnode);
 u_cond: TYPE_UNE(reg, reg) # 1 # UNE(bnode);
 cond: g_cond # 2 #
 cond: u_cond # 2 # 
-cond: TYPE_AND(g_cond,g_cond) # 1 #
-cond: TYPE_AND(g_cond,g_cond) # 1 #
-cond: TYPE_AND(u_cond,g_cond) # 1 #
-cond: TYPE_AND(g_cond,u_cond) # 1 #
-cond: TYPE_AND(u_cond,u_cond) # 1 #
-
-cond: TYPE_NOT(reg) # 1 # 
+cond: TYPE_AND(cond,cond) # 1 # AND(bnode);
+cond: TYPE_NOT(cond) # 1 # NOT(bnode);
 %%

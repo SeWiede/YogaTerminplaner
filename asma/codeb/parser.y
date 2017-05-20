@@ -317,7 +317,7 @@ Cond: andCond
 		@e Cond.names : Cterm.names;
 		@Cond.names@  = @Cterm.names@;
 		
-		@i @Cond.node@ = gen_node(TYPE_NOT, @Cterm.node@, NULL, 0, NULL);;
+		@i @Cond.node@ = gen_node(TYPE_NOT, @Cterm.node@, NULL, 0, NULL);
 	@}
 	;
 	
