@@ -180,7 +180,8 @@ g_cond: TYPE_GREATER(reg, reg) # 1 # GREATER(bnode);
 u_cond: TYPE_UNE(reg, reg) # 1 # UNE(bnode);
 cond: g_cond # 2 #
 cond: u_cond # 2 #
-cond: TYPE_COND(cond) # 1 # COND(bnode); 
-cond: TYPE_AND(left,cond) # 1 # 
+cond: TYPE_COND(cond) # 0 # 
+cond: TYPE_NOT(cond) # 0 # 
+cond: TYPE_AND(left,cond) # 0 # 
 left: cond # 1 # printf("label%d:\n", bnode->truelabel);
 %%

@@ -43,17 +43,17 @@ Tree notLabels(Tree start) {
 
 Tree populateDecisionTree(Tree curr, int tl, int fl, int nl) {
 	if(OP_LABEL(curr) == TYPE_AND) {
-		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), gen_label(), fl, 0);
-		RIGHT_CHILD(curr) = populateDecisionTree(RIGHT_CHILD(curr), tl, fl, 0);
+		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), gen_label(), fl, nl);
+		RIGHT_CHILD(curr) = populateDecisionTree(RIGHT_CHILD(curr), tl, fl, nl);
 	} else if(OP_LABEL(curr) == TYPE_NOT) {
-		curr = populateDecisionTree(LEFT_CHILD(curr), fl, tl, 0);
+		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), fl, tl, nl);
 	} else if(OP_LABEL(curr) == TYPE_COND) {
-		curr = populateDecisionTree(LEFT_CHILD(curr), tl, fl, 0);
-	} else {
-		curr->truelabel = tl;
-		curr->falselabel = fl;
-		curr->nextlabel = 0;
+		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), tl, fl, nl);
 	}
+	curr->truelabel = tl;
+	curr->falselabel = fl;
+	curr->nextlabel = 0;
+	
 	return curr;
 }
 Tree gen_node_cond(Nodetype type, Tree left, Tree right, int const_num, char *name, int tl, int fl, int nl) {
