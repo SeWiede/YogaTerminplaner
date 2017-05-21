@@ -84,45 +84,43 @@ void printLabels(Tree bnode){
 	}
 }
 
-int getCorrectTrueLabel(Tree bnode) {
+int getCorrectLabel(Tree bnode) {
 	if(bnode->notLabels == 1) {
 		return bnode->falselabel;
 	}
 	return bnode->truelabel;
 }
 
-int getCorrectFalseLabel(Tree bnode) {
-	if(bnode->notLabels == 1) {
-		return bnode->truelabel;
-	}
-	return bnode->falselabel;
-}
 
 void GREATER(Tree bnode){
 	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
-	printf("\tjg label%d\n", getCorrectTrueLabel(bnode));
-	printf("\tjmp label%d\n", getCorrectFalseLabel(bnode));
-	printf("label%d:\n", bnode->truelabel);
+	printf("\tjg label%d\n", bnode->truelabel);
+	printf("\tjmp label%d\n", bnode->falselabel);
 	freeReg(RIGHT_CHILD(bnode)->reg);
 }
 
 void UNE(Tree bnode){
 	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
-	printf("\tjne label%d\n", getCorrectTrueLabel(bnode));
-	printf("\tjmp label%d\n", getCorrectFalseLabel(bnode));
-	printf("label%d:\n", bnode->truelabel);
+	printf("\tjne label%d\n", bnode->truelabel);
+	printf("\tjmp label%d\n", bnode->falselabel);
 	freeReg(RIGHT_CHILD(bnode)->reg);
 }
 
+void COND(Tree bnode) {
+	printf("condlabel%d:\n", LEFT_CHILD(bnode)->truelabel);
+	printf("\tjmp label%d\n", getCorrectLabel(bnode));
+	printf("condlabel%d:\n", LEFT_CHILD(bnode)->falselabel);		
+}
 
 void IF(Tree bnode){
+	printf("label%d:\n", bnode->truelabel);
 	printf("\tjmp %s\n", bnode->name);
 	printf("label%d:\n", bnode->falselabel);
 }
 
 %}
 
-%term TYPE_VAR=0 TYPE_CONST=1 TYPE_ADD=2 TYPE_SUB=3 TYPE_MUL=4 TYPE_ARRAY=5 TYPE_STATEMENTS=6 TYPE_CREATE = 7 TYPE_RETURN = 8 TYPE_ASSIGN = 9 TYPE_VAR_ASS = 10 TYPE_LABEL=11 TYPE_GOTO=12 TYPE_TERM = 13 TYPE_AND=14 TYPE_NOT=15 TYPE_UNE =16 TYPE_GREATER =17 TYPE_IF =18
+%term TYPE_VAR=0 TYPE_CONST=1 TYPE_ADD=2 TYPE_SUB=3 TYPE_MUL=4 TYPE_ARRAY=5 TYPE_STATEMENTS=6 TYPE_CREATE = 7 TYPE_RETURN = 8 TYPE_ASSIGN = 9 TYPE_VAR_ASS = 10 TYPE_LABEL=11 TYPE_GOTO=12 TYPE_TERM = 13 TYPE_AND=14 TYPE_NOT=15 TYPE_UNE =16 TYPE_GREATER =17 TYPE_IF =18 TYPE_COND=19
 %start Stats
 %%
 Stats: stat # 1 #
@@ -181,6 +179,8 @@ reg: TYPE_VAR_ASS # 0 # bnode->reg = getregForVariable(bnode->name);
 g_cond: TYPE_GREATER(reg, reg) # 1 # GREATER(bnode);
 u_cond: TYPE_UNE(reg, reg) # 1 # UNE(bnode);
 cond: g_cond # 2 #
-cond: u_cond # 2 # 
-cond: TYPE_AND(cond,cond) # 1 # 
+cond: u_cond # 2 #
+cond: TYPE_COND(cond) # 1 # COND(bnode); 
+cond: TYPE_AND(left,cond) # 1 # 
+left: cond # 1 # printf("label%d:\n", bnode->truelabel);
 %%

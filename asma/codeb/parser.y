@@ -14,7 +14,7 @@ int yywrap(){
 	return 1;
 }
 
-int labelID=1;
+int labelID=2;
 
 int registers[15] = {0};
 
@@ -28,26 +28,42 @@ int gen_label() {
 }
 
 int oberfalselabel = 0;
+int obertruelabel = 1;
 
 Tree notLabels(Tree start) {
-    start->notLabels = !(start->notLabels);	
-	if(RIGHT_CHILD(start) != NULL) {
-		RIGHT_CHILD(start)=notLabels(RIGHT_CHILD(start));
+	if(OP_LABEL(start) == TYPE_AND) {
+    	RIGHT_CHILD(start) = notLabels(RIGHT_CHILD(start));	
 	}
-	if(LEFT_CHILD(start) != NULL) {
-		LEFT_CHILD(start) = notLabels(LEFT_CHILD(start));
+	else {
+		start->notLabels = !(start->notLabels);
 	}
-
 	return start;
 }
 
-Tree gen_node_cond(Nodetype type, Tree left, Tree right, int const_num, char *name, int tl, int fl) {
+
+Tree populateDecisionTree(Tree curr, int tl, int fl, int nl) {
+	if(OP_LABEL(curr) == TYPE_AND) {
+		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), gen_label(), fl, 0);
+		RIGHT_CHILD(curr) = populateDecisionTree(RIGHT_CHILD(curr), tl, fl, 0);
+	} else if(OP_LABEL(curr) == TYPE_NOT) {
+		curr = populateDecisionTree(LEFT_CHILD(curr), fl, tl, 0);
+	} else if(OP_LABEL(curr) == TYPE_COND) {
+		curr = populateDecisionTree(LEFT_CHILD(curr), tl, fl, 0);
+	} else {
+		curr->truelabel = tl;
+		curr->falselabel = fl;
+		curr->nextlabel = 0;
+	}
+	return curr;
+}
+Tree gen_node_cond(Nodetype type, Tree left, Tree right, int const_num, char *name, int tl, int fl, int nl) {
 	Tree t = malloc(sizeof(struct tree));
 	OP_LABEL(t) = type;
 	LEFT_CHILD(t) = left;
 	RIGHT_CHILD(t) = right;
 	t->truelabel = tl;
 	t->falselabel = fl;
+	t->nextlabel = nl;
 	t->const_num = const_num;
 	t->notLabels = 0;
 	if(name != NULL) {
@@ -302,8 +318,7 @@ Stat: RETURN Expr
 		@Stat.names@ = createList(@ID.name@, USE, LABEL, @Cond.names@);//concat+ create?
 
 
-		@i @Stat.node@ = gen_node_cond(TYPE_IF, @Cond.node@, NULL, 0, @ID.name@, 0, oberfalselabel);
-		oberfalselabel = gen_label();
+		@i @Stat.node@ = gen_node_cond(TYPE_IF, populateDecisionTree(@Cond.node@, obertruelabel, oberfalselabel, 0), NULL, 0, @ID.name@, obertruelabel, oberfalselabel, 0);
 	@}
 	| Lexpr EQU Expr
 	@{
@@ -340,7 +355,7 @@ andCond: Cterm
 		@e andCond.names : andCond.1.names Cterm.names;
 		@andCond.names@ = concatList(@Cterm.names@, @andCond.1.names@);
 	
-		@i @andCond.node@ = gen_node(TYPE_AND, @andCond.1.node@, @Cterm.node@, 0, NULL);	
+		@i @andCond.node@ = gen_node_cond(TYPE_AND, @andCond.1.node@, @Cterm.node@, 0, NULL, @Cterm.node@->truelabel, @Cterm.node@->falselabel, @Cterm.node@->nextlabel);	
 	@}
 	;
 
@@ -356,7 +371,7 @@ Cond: andCond
 		@e Cond.names : Cterm.names;
 		@Cond.names@  = @Cterm.names@;
 		
-		@i @Cond.node@ = notLabels(@Cterm.node@);
+		@i @Cond.node@ = gen_node(TYPE_NOT, @Cterm.node@, NULL, 0, NULL);
 	@}
 	;
 	
@@ -364,22 +379,22 @@ Cterm: BOPEN Cond BCLOSE
 	@{
 		@e Cterm.names : Cond.names;
 		@Cterm.names@ = @Cond.names@;
-	
-		@i @Cterm.node@	= @Cond.node@;
+
+		@i @Cterm.node@	= gen_node(TYPE_COND, @Cond.node@, NULL, 0, NULL);
 	@}
 	| Expr UNE Expr
 	@{
 	    @e Cterm.names : Expr.0.names Expr.1.names;
 		@Cterm.names@ = concatList(@Expr.0.names@, @Expr.1.names@);
 		
-		@i @Cterm.node@	= gen_node_cond(TYPE_UNE, @Expr.0.node@, @Expr.1.node@, 0, NULL, gen_label(), oberfalselabel);
+		@i @Cterm.node@	= gen_node(TYPE_UNE, @Expr.0.node@, @Expr.1.node@, 0, NULL);
 	@}
 	| Expr GREATER Expr
 	@{
 		@e Cterm.names : Expr.0.names Expr.1.names;
 		@Cterm.names@ = concatList(@Expr.0.names@, @Expr.1.names@);
 	
-		@i @Cterm.node@	= gen_node_cond(TYPE_GREATER, @Expr.0.node@, @Expr.1.node@, 0, NULL, gen_label(), oberfalselabel);	
+		@i @Cterm.node@	= gen_node(TYPE_GREATER, @Expr.0.node@, @Expr.1.node@, 0, NULL);	
 	@}
 
 	;
