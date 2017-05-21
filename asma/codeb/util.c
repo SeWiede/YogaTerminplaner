@@ -104,6 +104,7 @@ void freeReg(int regno) {
 	}
 }
 
+
 void freeAllRegs(){
 	int i;
 	for(i=15; i >=0 ;i--){
@@ -113,6 +114,15 @@ void freeAllRegs(){
 	}
 }
 
+void freeTempRegs(){
+	int i;
+	for(i=15; i >=0 ;i--){
+		if(registers[i] == REG_USED && isCalleeSaved(i) == 1)
+			printf("\tpop %s\n", toRegister(i));
+		if(registers[i] == REG_USED)
+			registers[i] = REG_FREE;
+	}
+}
 int getregForVariable(char *var) {
 	int i;
 	for(i=0;i<16;i++){

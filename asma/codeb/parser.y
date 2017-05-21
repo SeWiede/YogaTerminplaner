@@ -318,7 +318,9 @@ Stat: RETURN Expr
 		@Stat.names@ = createList(@ID.name@, USE, LABEL, @Cond.names@);//concat+ create?
 
 
-		@i @Stat.node@ = gen_node_cond(TYPE_IF, populateDecisionTree(@Cond.node@, obertruelabel, oberfalselabel, 0), NULL, 0, @ID.name@, obertruelabel, oberfalselabel, 0);
+		@i @Stat.node@ = gen_node_cond(TYPE_IF, populateDecisionTree(@Cond.node@, obertruelabel, oberfalselabel, 0), NULL, 0, @ID.name@, obertruelabel, oberfalselabel, 0); 
+		obertruelabel = gen_label();
+		oberfalselabel = gen_label();
 	@}
 	| Lexpr EQU Expr
 	@{
