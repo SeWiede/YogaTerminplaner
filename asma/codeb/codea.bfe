@@ -87,7 +87,7 @@ void printLabels(Tree bnode){
 
 
 void GREATER(Tree bnode){
-	printf("\tcmp %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
 	printf("\tjg %s\n", bnode->truelabel);
 	if(!bnode->lastand)
 		printf("\tjmp %s\n", bnode->falselabel);
