@@ -21,9 +21,10 @@ typedef struct tree {
 
 	char *array_string;
 
-	int truelabel;
-	int falselabel;
-	int nextlabel;
+	char *truelabel;
+	char *falselabel;
+	char *nextlabel;
+	int lastand;
 
 	int notLabels;	
 	struct burm_state *state;

@@ -22,13 +22,13 @@ main(){
 	yyparse();
 }
 
+int ands =0;
+
+int debug =0;
 
 int gen_label() {
 	return labelID++;
 }
-
-int oberfalselabel = 0;
-int obertruelabel = 1;
 
 Tree notLabels(Tree start) {
 	if(OP_LABEL(start) == TYPE_AND) {
@@ -40,10 +40,9 @@ Tree notLabels(Tree start) {
 	return start;
 }
 
-
-Tree populateDecisionTree(Tree curr, int tl, int fl, int nl) {
+Tree populateDecisionTree(Tree curr, char * tl, char * fl, char * nl) {
 	if(OP_LABEL(curr) == TYPE_AND) {
-		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), gen_label(), fl, nl);
+		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), genLabel(), fl, nl);
 		RIGHT_CHILD(curr) = populateDecisionTree(RIGHT_CHILD(curr), tl, fl, nl);
 	} else if(OP_LABEL(curr) == TYPE_NOT) {
 		LEFT_CHILD(curr) = populateDecisionTree(LEFT_CHILD(curr), fl, tl, nl);
@@ -53,10 +52,12 @@ Tree populateDecisionTree(Tree curr, int tl, int fl, int nl) {
 	curr->truelabel = tl;
 	curr->falselabel = fl;
 	curr->nextlabel = 0;
-	
+	if(OP_LABEL(curr) == TYPE_AND && curr->lastand >= ands){
+		RIGHT_CHILD(curr)->lastand = 1;
+	}
 	return curr;
 }
-Tree gen_node_cond(Nodetype type, Tree left, Tree right, int const_num, char *name, int tl, int fl, int nl) {
+Tree gen_node_cond(Nodetype type, Tree left, Tree right, int const_num, char *name, char* tl, char* fl, char* nl) {
 	Tree t = malloc(sizeof(struct tree));
 	OP_LABEL(t) = type;
 	LEFT_CHILD(t) = left;
@@ -269,7 +270,8 @@ Labeldefs: ID COLON
 
 Stats: Labeldefs Stat SEMICOLON
 	@{
-		@i @Stats.names@ = @Stat.names@;
+		@e Stats.names : Labeldefs.names Stat.names;
+		@Stats.names@ = concatList(@Labeldefs.names@, @Stat.names@);
 	
 		@i @Stats.node@ = gen_node(TYPE_STATEMENTS, @Labeldefs.node@, @Stat.node@, 0, NULL);
 	@}
@@ -317,10 +319,10 @@ Stat: RETURN Expr
 		@e Stat.names : Cond.names ID.name;
 		@Stat.names@ = createList(@ID.name@, USE, LABEL, @Cond.names@);//concat+ create?
 
-
+		char* obertruelabel = @ID.name@;
+		char* oberfalselabel = genLabel();
 		@i @Stat.node@ = gen_node_cond(TYPE_IF, populateDecisionTree(@Cond.node@, obertruelabel, oberfalselabel, 0), NULL, 0, @ID.name@, obertruelabel, oberfalselabel, 0); 
-		obertruelabel = gen_label();
-		oberfalselabel = gen_label();
+		ands =0;	
 	@}
 	| Lexpr EQU Expr
 	@{
@@ -357,7 +359,12 @@ andCond: Cterm
 		@e andCond.names : andCond.1.names Cterm.names;
 		@andCond.names@ = concatList(@Cterm.names@, @andCond.1.names@);
 	
-		@i @andCond.node@ = gen_node_cond(TYPE_AND, @andCond.1.node@, @Cterm.node@, 0, NULL, @Cterm.node@->truelabel, @Cterm.node@->falselabel, @Cterm.node@->nextlabel);	
+		@e andCond.node : andCond.1.node Cterm.node;
+		{	@andCond.node@ = gen_node_cond(TYPE_AND, @andCond.1.node@, @Cterm.node@, 0, NULL, 
+											@Cterm.node@->truelabel, @Cterm.node@->falselabel, 
+											@Cterm.node@->nextlabel);
+			@andCond.node@->lastand = ands++;
+		}	
 	@}
 	;
 
@@ -396,7 +403,7 @@ Cterm: BOPEN Cond BCLOSE
 		@e Cterm.names : Expr.0.names Expr.1.names;
 		@Cterm.names@ = concatList(@Expr.0.names@, @Expr.1.names@);
 	
-		@i @Cterm.node@	= gen_node(TYPE_GREATER, @Expr.0.node@, @Expr.1.node@, 0, NULL);	
+		@i @Cterm.node@	= gen_node(TYPE_GREATER, @Expr.0.node@, @Expr.1.node@, 0, NULL);		
 	@}
 
 	;

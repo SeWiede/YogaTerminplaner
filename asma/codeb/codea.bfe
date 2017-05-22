@@ -94,28 +94,57 @@ int getCorrectLabel(Tree bnode) {
 
 void GREATER(Tree bnode){
 	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
-	printf("\tjg label%d\n", bnode->truelabel);
-	printf("\tjmp label%d\n", bnode->falselabel);
-	freeReg(RIGHT_CHILD(bnode)->reg);
+	printf("\tjg %s\n", bnode->truelabel);
+	if(!bnode->lastand)
+		printf("\tjmp %s\n", bnode->falselabel);
+	freeReg(RIGHT_CHILD(bnode)->reg);freeReg(LEFT_CHILD(bnode)->reg);
+}
+
+void GREATER_CONST_CONST(Tree bnode){
+	if(LEFT_CHILD(bnode)->const_num > RIGHT_CHILD(bnode)->const_num){
+		//printf("\tjmp %s\n", bnode->truelabel);
+	}else{
+		if(!bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
+	}
 }
 
 void UNE(Tree bnode){
 	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
-	printf("\tjne label%d\n", bnode->truelabel);
-	printf("\tjmp label%d\n", bnode->falselabel);
-	freeReg(RIGHT_CHILD(bnode)->reg);
+	printf("\tjne %s\n", bnode->truelabel);
+	if(!bnode->lastand)
+		printf("\tjmp %s\n", bnode->falselabel);
+	freeReg(RIGHT_CHILD(bnode)->reg);freeReg(LEFT_CHILD(bnode)->reg);
 }
 
-void COND(Tree bnode) {
-	printf("condlabel%d:\n", LEFT_CHILD(bnode)->truelabel);
-	printf("\tjmp label%d\n", getCorrectLabel(bnode));
-	printf("condlabel%d:\n", LEFT_CHILD(bnode)->falselabel);		
+void UNE_CONST_CONST(Tree bnode){
+	if(LEFT_CHILD(bnode)->const_num != RIGHT_CHILD(bnode)->const_num){
+		//printf("\tjmp %s\n", bnode->truelabel);
+	}else{
+		if(!bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
+	}
 }
+
+void JMP_CONST_REG(Tree bnode, char* jc, int rightreg, int var){
+	Tree right = rightreg ? RIGHT_CHILD(bnode) : LEFT_CHILD(bnode);
+	Tree left = rightreg ? LEFT_CHILD(bnode) : RIGHT_CHILD(bnode);
+
+	printf("\tcmp $%d, %s\n", right->const_num, toRegister(left->reg));
+	printf("\t%s %s\n", jc, bnode->truelabel);
+
+	if(!bnode->lastand)
+		printf("\tjmp %s\n", bnode->falselabel);
+	if(!var)
+		freeReg(left->reg);
+}
+
 
 void IF(Tree bnode){
-	printf("label%d:\n", bnode->truelabel);
-	printf("\tjmp %s\n", bnode->name);
-	printf("label%d:\n", bnode->falselabel);
+	//printf("%s:\n", bnode->truelabel);
+	//printf("\tjmp %s\n", bnode->name);
+	printf("%s:\n", bnode->falselabel);
+	free(bnode->falselabel);
 }
 
 %}
@@ -177,11 +206,21 @@ reg: TYPE_VAR_ASS # 0 # bnode->reg = getregForVariable(bnode->name);
 
 
 g_cond: TYPE_GREATER(reg, reg) # 1 # GREATER(bnode);
+g_cond: TYPE_GREATER(constant, reg) # 1 # JMP_CONST_REG(bnode, "jl", 0, 0);
+g_cond: TYPE_GREATER(reg, constant) # 1 # JMP_CONST_REG(bnode, "jg",1, 0);
+g_cond: TYPE_GREATER(constant, param) # 1 # JMP_CONST_REG(bnode, "jl", 0, 1);
+g_cond: TYPE_GREATER(param, constant) # 1 # JMP_CONST_REG(bnode, "jg", 1, 1);
+g_cond: TYPE_GREATER(constant, constant) # 1 # GREATER_CONST_CONST(bnode);
 u_cond: TYPE_UNE(reg, reg) # 1 # UNE(bnode);
+u_cond: TYPE_UNE(constant, reg) # 1 # JMP_CONST_REG(bnode, "jne",  0, 0);
+u_cond: TYPE_UNE(constant, param) # 1 # JMP_CONST_REG(bnode, "jne",  0, 1);
+u_cond: TYPE_UNE(reg, constant) # 1 # JMP_CONST_REG(bnode, "jne",  1, 0);
+u_cond: TYPE_UNE(param, constant) # 1 # JMP_CONST_REG(bnode, "jne",  1, 1);
+u_cond: TYPE_UNE(constant, constant) # 1 # UNE_CONST_CONST(bnode);
 cond: g_cond # 2 #
 cond: u_cond # 2 #
 cond: TYPE_COND(cond) # 0 # 
 cond: TYPE_NOT(cond) # 0 # 
 cond: TYPE_AND(left,cond) # 0 # 
-left: cond # 1 # printf("label%d:\n", bnode->truelabel);
+left: cond # 1 # printf("%s:\n", bnode->truelabel);free(bnode->truelabel);
 %%
