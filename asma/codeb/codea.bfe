@@ -89,7 +89,7 @@ void printLabels(Tree bnode){
 void GREATER(Tree bnode){
 	printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
 	printf("\tjg %s\n", bnode->truelabel);
-	if(!bnode->lastand)
+	if(bnode->invlabels || !bnode->lastand)
 		printf("\tjmp %s\n", bnode->falselabel);
 	freeReg(RIGHT_CHILD(bnode)->reg);freeReg(LEFT_CHILD(bnode)->reg);
 }
@@ -107,7 +107,7 @@ void GREATER_CONST_CONST(Tree bnode){
 void UNE(Tree bnode){
 	printf("\tcmp %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
 	printf("\tne %s\n", bnode->truelabel);
-	if(!bnode->lastand)
+	if(bnode->invlabels || !bnode->lastand)
 		printf("\tjmp %s\n", bnode->falselabel);
 	freeReg(RIGHT_CHILD(bnode)->reg);freeReg(LEFT_CHILD(bnode)->reg);
 }
