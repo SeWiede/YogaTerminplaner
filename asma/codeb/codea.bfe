@@ -96,7 +96,7 @@ void GREATER(Tree bnode){
 
 void GREATER_CONST_CONST(Tree bnode){
 	if(LEFT_CHILD(bnode)->const_num > RIGHT_CHILD(bnode)->const_num){
-		if(bnode->lastand)
+		if(bnode->invlabels || bnode->lastand)
 			printf("\tjmp %s\n", bnode->truelabel);
 	}else{
 		if(bnode->lastand || !bnode->invlabels)
@@ -114,7 +114,7 @@ void UNE(Tree bnode){
 
 void UNE_CONST_CONST(Tree bnode){
 	if(LEFT_CHILD(bnode)->const_num != RIGHT_CHILD(bnode)->const_num){
-		if(bnode->lastand)
+		if(bnode->invlabels || bnode->lastand)
 			printf("\tjmp %s\n", bnode->truelabel);
 	}else{
 		if(bnode->lastand || !bnode->invlabels)
