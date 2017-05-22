@@ -25,8 +25,8 @@ typedef struct tree {
 	char *falselabel;
 	char *nextlabel;
 	int lastand;
-
-	int notLabels;	
+	int invlabels;
+	
 	struct burm_state *state;
 } *NODEPTR_TYPE, *Tree;
 
