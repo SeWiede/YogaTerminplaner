@@ -427,7 +427,7 @@ Lexpr: ID
 		@e Lexpr.names : ID.name;
 		@Lexpr.names@ = createList(@ID.name@, USE, VARIABLE, NULL);
 
-		@i @Lexpr.node@ = gen_node(TYPE_VAR_ASS, NULL, NULL, 0, @ID.name@);
+		@i @Lexpr.node@ = gen_node(TYPE_VAR, NULL, NULL, 0, @ID.name@);
 	@}
 	| Term SQOPEN Expr SQCLOSE
 	@{
