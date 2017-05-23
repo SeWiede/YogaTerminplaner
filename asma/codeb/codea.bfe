@@ -96,14 +96,11 @@ void GREATER(Tree bnode){
 
 void GREATER_CONST_CONST(Tree bnode){
 	if(LEFT_CHILD(bnode)->const_num > RIGHT_CHILD(bnode)->const_num){
-		if(bnode->invlabels || bnode->lastand)
-			printf("\tjmp %s\n", bnode->truelabel);
-	}else{
-		if(bnode->invlabels){
-			printf("\tjmp %s\n", bnode->falselabel);
-		}else if(!bnode->lastand)
-			printf("\tjmp %s\n", bnode->falselabel);
+		printf("\tjmp %s\n", bnode->truelabel);
 	}
+	if(bnode->invlabels || !bnode->lastand)
+		printf("\tjmp %s\n", bnode->falselabel);
+	
 }
 
 void UNE(Tree bnode){
@@ -116,14 +113,11 @@ void UNE(Tree bnode){
 
 void UNE_CONST_CONST(Tree bnode){
 	if(LEFT_CHILD(bnode)->const_num != RIGHT_CHILD(bnode)->const_num){
-		if(bnode->invlabels || bnode->lastand)
-			printf("\tjmp %s\n", bnode->truelabel);
-	}else{
-		if(bnode->invlabels){
-			printf("\tjmp %s\n", bnode->falselabel);
-		}else if(!bnode->lastand)
-			printf("\tjmp %s\n", bnode->falselabel);
+		printf("\tjmp %s\n", bnode->truelabel);
 	}
+	if(bnode->invlabels || !bnode->lastand)
+		printf("\tjmp %s\n", bnode->falselabel);
+
 }
 
 void JMP_CONST_REG(Tree bnode, char* jc, int rightreg, int var){
