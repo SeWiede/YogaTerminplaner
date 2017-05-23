@@ -97,8 +97,10 @@ int getreg(void){
 
 void freeReg(int regno) {
 	if(registers[regno] == REG_USED) {
-		if(isCalleeSaved(regno))
-			registers[regno] = REG_CALLEE_SAVED_FREE;	
+		if(isCalleeSaved(regno)) {
+			registers[regno] = REG_CALLEE_SAVED_FREE;
+			printf("\tpop %s\n", toRegister(regno));
+		}	
 		else
 			registers[regno] = REG_FREE;
 	}
