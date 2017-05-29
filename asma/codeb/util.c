@@ -96,7 +96,7 @@ int getreg(void){
 }
 
 void freeReg(int regno) {
-	if(registers[regno] == REG_USED) {
+	if(regno > -1 && registers[regno] == REG_USED) {
 		if(isCalleeSaved(regno)) {
 			registers[regno] = REG_CALLEE_SAVED_FREE;
 			printf("\tpop %s\n", toRegister(regno));
@@ -165,4 +165,10 @@ char *genLabel(void){
 	char * ret = (char*) malloc(30*sizeof(char));;
 	sprintf(ret, "wr%d", labelcounter++);
 	return ret;	
+}
+
+
+void arrayFree(Tree bnode){
+	freeReg(LEFT_CHILD(bnode)->reg);
+	freeReg(RIGHT_CHILD(bnode)->reg);
 }

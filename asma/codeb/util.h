@@ -1,6 +1,6 @@
 #ifndef UTIL_H
 #define UITL_H
-
+#include "tree.h"
 
 enum regs {rax = 0, rcx, rdx, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15, rbx, rbp, rsp};
 
@@ -34,4 +34,6 @@ void freeAllRegs(void);
 void freeTempRegs(void);
 
 char *genLabel(void);
+
+void arrayFree(Tree bnode);
 #endif

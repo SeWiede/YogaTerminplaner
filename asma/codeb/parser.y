@@ -21,11 +21,6 @@ int registers[15] = {0};
 main(){
 	yyparse();
 }
-int debug =0;
-
-int gen_label() {
-	return labelID++;
-}
 
 Tree populateDecisionTree(Tree curr, char * tl, char * fl, int invl, int and) {
 	if(OP_LABEL(curr) == TYPE_AND) {
@@ -58,6 +53,9 @@ Tree gen_node_cond(Nodetype type, Tree left, Tree right, int const_num, char *na
 		t->name = strdup(name);
 	}
 	
+	if(type == TYPE_CONST)
+		t->reg =-1;		
+	
 	return t;
 }
 
@@ -70,6 +68,9 @@ Tree gen_node(Nodetype type, Tree left, Tree right, int const_num, char *name) {
 	if(name != NULL) {
 		t->name = strdup(name);
 	}
+	
+	if(type == TYPE_CONST)
+		t->reg =-1;		
 	
 	return t;
 }
