@@ -88,9 +88,10 @@ void printLabels(Tree bnode){
 void GREATER_CONST_CONST(Tree bnode){
 	if(LEFT_CHILD(bnode)->const_num > RIGHT_CHILD(bnode)->const_num){
 		printf("\tjmp %s\n", bnode->truelabel);
+	}else{
+		if(bnode->invlabels || !bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
 	}
-	if(bnode->invlabels || !bnode->lastand)
-		printf("\tjmp %s\n", bnode->falselabel);
 	
 }
 
@@ -122,9 +123,10 @@ void C_JMP(Tree bnode, char* jc, int rightreg, int array){
 void UNE_CONST_CONST(Tree bnode){
 	if(LEFT_CHILD(bnode)->const_num != RIGHT_CHILD(bnode)->const_num){
 		printf("\tjmp %s\n", bnode->truelabel);
+	}else{
+		if(bnode->invlabels || !bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
 	}
-	if(bnode->invlabels || !bnode->lastand)
-		printf("\tjmp %s\n", bnode->falselabel);
 
 }
 
@@ -172,6 +174,8 @@ Stats: TYPE_STATEMENTS(Stats, label) # 0 #
 label: TYPE_LABEL # 1 # printLabels(bnode); freeTempRegs();
 stat: TYPE_CREATE(reg)  # 1 # bnode->reg=getregForNewVariable(bnode->name, LEFT_CHILD(bnode)->reg); 
 stat: TYPE_RETURN(reg)	# 1 # if(LEFT_CHILD(bnode)->reg != rax) printf("\tmovq %s, %rax\n", toRegister(LEFT_CHILD(bnode)->reg));/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeTempRegs(); printf("\tret\n");
+stat: TYPE_RETURN(array)	# 1 # printf("\tmovq %s, %rax\n", LEFT_CHILD(bnode)->array_string);/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeTempRegs(); printf("\tret\n");
+stat: TYPE_RETURN(constant)	# 1 # printf("\tmovq $%d, %rax\n", LEFT_CHILD(bnode)->const_num);/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeTempRegs(); printf("\tret\n");
 stat: TYPE_ASSIGN(reg, reg) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg)); freeTempRegs();
 stat: TYPE_ASSIGN(param, param) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg)); freeTempRegs();
 stat: TYPE_ASSIGN(param, reg) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg)); freeTempRegs();
@@ -245,6 +249,10 @@ u_cond: TYPE_UNE(constant, param) # 1 # JMP_CONST_REG(bnode, "jne",  0, 1, 0);
 u_cond: TYPE_UNE(reg, constant) # 1 # JMP_CONST_REG(bnode, "jne",  1, 0, 0);
 u_cond: TYPE_UNE(param, constant) # 1 # JMP_CONST_REG(bnode, "jne",  1, 1, 0);
 u_cond: TYPE_UNE(constant, constant) # 1 # UNE_CONST_CONST(bnode);
+
+g_cond: TYPE_UNE(param, param) # 1 # C_JMP(bnode, "jne", 0, 0);
+g_cond: TYPE_GREATER(param, param) # 1 # C_JMP(bnode, "jg", 0, 0);
+
 
 g_cond: TYPE_GREATER(constant, array) # 1 # JMP_CONST_REG(bnode, "jle", 0, 1, 1);
 g_cond: TYPE_GREATER(array, constant) # 1 # JMP_CONST_REG(bnode, "jg",1, 0, 1);
