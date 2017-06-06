@@ -1,0 +1,299 @@
+%{
+#include "tree.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include "util.h"
+
+int nestedcall=0;
+
+static void MUL2_CONST_REG(Tree bnode) {
+	bnode->reg = RIGHT_CHILD(bnode)->reg;
+	printf("\timulq $%d, %s\n", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg));
+}
+
+static void MUL2_REG_CONST(Tree bnode) {
+	bnode->reg = LEFT_CHILD(bnode)->reg;
+	printf("\timulq $%d, %s\n", RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg));
+}
+static void MUL2(Tree bnode) {
+	if(LEFT_CHILD(bnode)->reg == rax){
+		bnode->reg = LEFT_CHILD(bnode)->reg;
+		printf("\timulq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
+		freeReg(RIGHT_CHILD(bnode)->reg);
+	}else{
+		bnode->reg=RIGHT_CHILD(bnode)->reg; 
+		printf("\timulq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+		freeReg(LEFT_CHILD(bnode)->reg);
+	}	
+}
+
+static void MUL2_NOFREE(Tree bnode, int variable) {
+	if(variable){
+		bnode->reg=RIGHT_CHILD(bnode)->reg;
+		printf("\timulq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+	}else{
+		bnode->reg=LEFT_CHILD(bnode)->reg;
+		printf("\timulq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
+	}
+}
+
+static void MUL(Tree bnode){
+	int raxused = checkRegister(rax);
+	int rdxused = checkRegister(rdx);
+
+	if(RIGHT_CHILD(bnode)->reg != rdx) 
+		bnode->reg=RIGHT_CHILD(bnode)->reg; 
+	else
+		bnode->reg=getreg();
+
+	if(raxused != 1)
+		printf("\tpush %rax\n");
+	if(rdxused != 1)
+		printf("\tpush %rdx\n"); 
+	if(LEFT_CHILD(bnode)->reg != rax)
+		printf("\tmovq %s, %rax\n", toRegister(LEFT_CHILD(bnode)->reg)); 
+	printf("\timul %s\n", toRegister(RIGHT_CHILD(bnode)->reg)); 
+	printf("\tmovq %rax, %s\n", toRegister(bnode->reg)); 
+	if(rdxused != 1)
+		printf("\tpop %rdx\n");
+	 if(raxused != 1)
+		printf("\tpop %rax\n"); 
+	
+
+	freeReg(LEFT_CHILD(bnode)->reg);
+
+}
+
+static void ADD_REG_REG(Tree bnode){
+	if(LEFT_CHILD(bnode)->reg == rax){
+		bnode->reg = LEFT_CHILD(bnode)->reg;
+		printf("\taddq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
+		freeReg(RIGHT_CHILD(bnode)->reg);
+	}else{
+		bnode->reg=RIGHT_CHILD(bnode)->reg; 
+		printf("\taddq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+		freeReg(LEFT_CHILD(bnode)->reg);
+	}	
+}
+
+void printLabels(Tree bnode){
+	Tree tmp = bnode; 
+	while(tmp != NULL) {
+		printf("%s:\n", tmp->name);
+		free(tmp->name);
+		tmp= LEFT_CHILD(tmp);
+	}
+}
+
+void GREATER_CONST_CONST(Tree bnode){
+	if(LEFT_CHILD(bnode)->const_num > RIGHT_CHILD(bnode)->const_num){
+		printf("\tjmp %s\n", bnode->truelabel);
+	}else{
+		if(bnode->invlabels || !bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
+	}
+	
+}
+
+void C_JMP(Tree bnode, char* jc, int rightreg, int array){
+
+		/*if(bnode->invlabels){
+			if(strcmp(jc, "jne") == 0)
+				jc = "je";	
+			else if(strcmp(jc, "jg") == 0)	
+				jc = "jle";
+			else if(strcmp(jc, "jle") == 0))
+				jc = "jg";
+		}*/
+		
+		if(array == 2) {
+			printf("\tcmp %s, %s\n", LEFT_CHILD(bnode)->array_string, RIGHT_CHILD(bnode)->array_string);
+			arrayFree(RIGHT_CHILD(bnode));
+			arrayFree(LEFT_CHILD(bnode));
+			free(RIGHT_CHILD(bnode)->array_string);
+			free(LEFT_CHILD(bnode)->array_string);
+		}
+		else if(array == 1) {
+			Tree right = rightreg ? RIGHT_CHILD(bnode) : LEFT_CHILD(bnode);
+			Tree left = rightreg ? LEFT_CHILD(bnode) : RIGHT_CHILD(bnode);
+			printf("\tcmp %s, %s\n", toRegister(left->reg), right->array_string);
+			arrayFree(right);
+			free(right->array_string);
+			freeReg(left->reg);
+		}
+		else if(array == 0) {
+			printf("\tcmp %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
+			freeReg(RIGHT_CHILD(bnode)->reg);freeReg(LEFT_CHILD(bnode)->reg);
+		}
+		printf("\t%s %s\n", jc, bnode->truelabel);
+		if(bnode->invlabels || !bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
+}
+
+void UNE_CONST_CONST(Tree bnode){
+	if(LEFT_CHILD(bnode)->const_num != RIGHT_CHILD(bnode)->const_num){
+		printf("\tjmp %s\n", bnode->truelabel);
+	}else{
+		if(bnode->invlabels || !bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
+	}
+
+}
+
+void JMP_CONST_REG(Tree bnode, char* jc, int rightreg, int var, int array){
+	Tree right = rightreg ? RIGHT_CHILD(bnode) : LEFT_CHILD(bnode);
+	Tree left = rightreg ? LEFT_CHILD(bnode) : RIGHT_CHILD(bnode);
+
+	if(!array){
+		printf("\tcmp $%d, %s\n", right->const_num, toRegister(left->reg));
+		printf("\t%s %s\n", jc, bnode->truelabel);
+	
+		if(bnode->invlabels || !bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
+		if(!var)
+			freeReg(left->reg);	
+	}else{
+		printf("\tcmp $%d, %s\n", right->const_num, left->array_string);
+		printf("\t%s %s\n", jc, bnode->truelabel);
+			
+		if(bnode->invlabels || !bnode->lastand)
+			printf("\tjmp %s\n", bnode->falselabel);
+	
+		free(left->array_string);	
+		arrayFree(left);
+	}
+}
+
+
+void IF(Tree bnode){
+	//printf("%s:\n", bnode->truelabel);
+	//printf("\tjmp %s\n", bnode->name);
+	printf("%s:\n", bnode->falselabel);
+	free(bnode->falselabel);
+	free(bnode->truelabel);
+}
+
+ 
+%}
+
+%term TYPE_VAR=0 TYPE_CONST=1 TYPE_ADD=2 TYPE_SUB=3 TYPE_MUL=4 TYPE_ARRAY=5 TYPE_STATEMENTS=6 TYPE_CREATE = 7 TYPE_RETURN = 8 TYPE_ASSIGN = 9 TYPE_VAR_ASS = 10 TYPE_LABEL=11 TYPE_GOTO=12 TYPE_TERM = 13 TYPE_AND=14 TYPE_NOT=15 TYPE_UNE =16 TYPE_GREATER =17 TYPE_IF =18 TYPE_COND=19 TYPE_CALL=20 TYPE_FUNPAR=21 TYPE_FUNPARE=22
+%start Stats 
+%%
+Stats: stat # 1 #
+Stats: TYPE_STATEMENTS(Stats, stat) # 0 #
+Stats: TYPE_STATEMENTS(label, stat) # 0 #
+Stats: TYPE_STATEMENTS(Stats, label) # 0 #
+label: TYPE_LABEL # 1 # printLabels(bnode); freeTempRegs();
+stat: TYPE_TERM(reg) # 1 #
+stat: TYPE_CREATE(reg)  # 1 # bnode->reg=getregForNewVariable(bnode->name, LEFT_CHILD(bnode)->reg); 
+stat: TYPE_RETURN(reg)	# 1 # if(LEFT_CHILD(bnode)->reg != rax) printf("\tmovq %s, %rax\n", toRegister(LEFT_CHILD(bnode)->reg));/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeTempRegs(); printf("\tret\n");
+stat: TYPE_RETURN(array)	# 1 # printf("\tmovq %s, %rax\n", LEFT_CHILD(bnode)->array_string);/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeTempRegs(); printf("\tret\n");
+stat: TYPE_RETURN(constant)	# 1 # printf("\tmovq $%d, %rax\n", LEFT_CHILD(bnode)->const_num);/* printf("\tpop %rbx\n \tpop %rbp\n \tpop %r12\n \tpop %r13\n \tpop %r14\n \tpop %r15\n");*/ freeTempRegs(); printf("\tret\n");
+stat: TYPE_ASSIGN(reg, reg) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg)); freeTempRegs();
+stat: TYPE_ASSIGN(variable, variable) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg)); freeTempRegs();
+stat: TYPE_ASSIGN(variable, reg) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg)); freeTempRegs();
+stat: TYPE_ASSIGN(reg, variable) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg)); freeTempRegs();
+
+stat: TYPE_ASSIGN(array, reg) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), LEFT_CHILD(bnode)->array_string); free(LEFT_CHILD(bnode)->array_string); freeTempRegs();
+stat: TYPE_ASSIGN(array, variable) # 1 # printf("\tmovq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), LEFT_CHILD(bnode)->array_string); free(LEFT_CHILD(bnode)->array_string); freeTempRegs();
+stat: TYPE_ASSIGN(reg, array) # 1 # printf("\tmovq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string); freeTempRegs();
+stat: TYPE_ASSIGN(variable, array) # 1 # printf("\tmovq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string); freeTempRegs();
+stat: TYPE_ASSIGN(array, array) # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(bnode->reg)); printf("\tmovq %s, %s\n", toRegister(bnode->reg), LEFT_CHILD(bnode)->array_string); free(LEFT_CHILD(bnode)->array_string); free(RIGHT_CHILD(bnode)->array_string); freeReg(bnode->reg); freeTempRegs();
+stat: TYPE_ASSIGN(reg, constant) # 1 # printf("\tmovq $%d, %s\n", RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string); freeTempRegs();
+stat: TYPE_ASSIGN(variable, constant) # 1 # printf("\tmovq $%d, %s\n", RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string); freeTempRegs();
+stat: TYPE_ASSIGN(array, constant) # 1 # printf("\tmovq $%d, %s\n", RIGHT_CHILD(bnode)->const_num, LEFT_CHILD(bnode)->array_string); free(RIGHT_CHILD(bnode)->array_string); freeTempRegs();
+
+stat: TYPE_IF(cond) # 0 # IF(bnode) ; freeTempRegs();
+stat: TYPE_GOTO # 1 # printf("\tjmp %s\n", bnode->name); free(bnode->name);freeTempRegs();
+reg: TYPE_SUB(reg) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\tneg %s\n", toRegister(LEFT_CHILD(bnode)->reg));
+reg: TYPE_ADD(reg, reg) # 1 # ADD_REG_REG(bnode);
+reg: TYPE_MUL(reg, reg) # 1 # MUL2(bnode);
+reg: TYPE_VAR # 1 # bnode->reg=getreg(); printf("\tmovq %s, %s\n", toRegister(getregForVariable(bnode->name)), toRegister(bnode->reg));
+reg: TYPE_CONST # 1 # bnode->reg=getreg(); printf("\tmovq $%d, %s\n", bnode->const_num, toRegister(bnode->reg)); 
+reg: constant # 1 # bnode->reg=getreg(); printf("\tmovq $%d, %s\n", bnode->const_num, toRegister(bnode->reg));
+constant: TYPE_ADD(constant, constant) # 0 # bnode->const_num = LEFT_CHILD(bnode)->const_num + RIGHT_CHILD(bnode)->const_num;
+constant: TYPE_MUL(constant, constant) # 0 # bnode->const_num = LEFT_CHILD(bnode)->const_num * RIGHT_CHILD(bnode)->const_num;
+constant: TYPE_CONST # 0 # bnode->const_num = bnode->const_num;
+constant: TYPE_SUB(constant)  # 0 # bnode->const_num = -LEFT_CHILD(bnode)->const_num;
+reg: TYPE_ADD(reg, constant) # 1 # bnode->reg=LEFT_CHILD(bnode)->reg; printf("\taddq $%d, %s\n", RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg));
+reg: TYPE_ADD(constant, reg) # 1 #  bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\taddq $%d, %s\n", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg));
+variable: TYPE_VAR # 0 # bnode->reg=getregForVariable(bnode->name);
+reg: TYPE_ADD(variable, reg) # 1# bnode->reg=RIGHT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+reg: TYPE_ADD(reg, variable) # 1# bnode->reg=LEFT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", toRegister(RIGHT_CHILD(bnode)->reg), toRegister(LEFT_CHILD(bnode)->reg));
+reg: TYPE_ADD(variable, variable) # 1 # bnode->reg = getreg(); printf("\tlea 0(%s, %s, 1), %s\n", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg), toRegister(bnode->reg));
+reg: TYPE_ADD(array, reg) # 1 # bnode->reg = RIGHT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", LEFT_CHILD(bnode)->array_string, toRegister(RIGHT_CHILD(bnode)->reg)); free(LEFT_CHILD(bnode)->array_string);arrayFree(LEFT_CHILD(bnode));
+reg: TYPE_ADD(reg, array) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\taddq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string);arrayFree(RIGHT_CHILD(bnode));
+reg: TYPE_ADD(array, array) # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", LEFT_CHILD(bnode)->array_string ,toRegister(bnode->reg)); printf("\taddq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(bnode->reg));free(LEFT_CHILD(bnode)->array_string);free(RIGHT_CHILD(bnode)->array_string);arrayFree(LEFT_CHILD(bnode));arrayFree(RIGHT_CHILD(bnode));
+reg: arrayb # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", bnode->array_string, toRegister(bnode->reg)); free(bnode->array_string); freeReg(LEFT_CHILD(bnode)->reg); freeReg(RIGHT_CHILD(bnode)->reg);
+reg: arrayl # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", bnode->array_string, toRegister(bnode->reg)); free(bnode->array_string); freeReg(LEFT_CHILD(bnode)->reg); 
+reg: arrayr # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", bnode->array_string, toRegister(bnode->reg)); free(bnode->array_string); freeReg(RIGHT_CHILD(bnode)->reg);
+arrayb: TYPE_ARRAY(reg, reg) # 1 # bnode->array_string = malloc(50 * sizeof(char)); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg)); 
+arrayr: TYPE_ARRAY(variable, reg) # 1 # bnode->array_string = malloc(50 * sizeof(char)); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));  
+arrayl: TYPE_ARRAY(reg, variable) # 1 # bnode->array_string = malloc(50 * sizeof(char)); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+array: TYPE_ARRAY(variable, variable) # 1 # bnode->array_string = malloc(50 * sizeof(char)); sprintf(bnode->array_string, "0(%s, %s, 8)", toRegister(LEFT_CHILD(bnode)->reg), toRegister(RIGHT_CHILD(bnode)->reg));
+arrayl: TYPE_ARRAY(reg, constant) # 1 # bnode->array_string = malloc(50 * sizeof(char)); sprintf(bnode->array_string, "%d(%s)", 8*RIGHT_CHILD(bnode)->const_num, toRegister(LEFT_CHILD(bnode)->reg));
+arrayr: TYPE_ARRAY(constant, reg) # 1 # bnode->array_string = malloc(50 * sizeof(char)); sprintf(bnode->array_string, "%d(,%s, 8)", LEFT_CHILD(bnode)->const_num, toRegister(RIGHT_CHILD(bnode)->reg)); 
+array: TYPE_ARRAY(constant, constant) # 1 # bnode->array_string = malloc(50 * sizeof(char)); sprintf(bnode->array_string, "%d(%s)", LEFT_CHILD(bnode)->const_num + RIGHT_CHILD(bnode)->const_num);
+array: arrayb # 0 #
+array: arrayl # 0 #
+array: arrayr # 0 #
+reg: TYPE_MUL(constant, reg) # 1 # MUL2_CONST_REG(bnode);
+reg: TYPE_MUL(reg, constant) # 1 # MUL2_REG_CONST(bnode);
+reg: TYPE_MUL(variable, reg) # 1 # MUL2_NOFREE(bnode,1);
+reg: TYPE_MUL(reg, variable) # 1 # MUL2_NOFREE(bnode,0);
+reg: TYPE_MUL(array, reg) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\timulq %s, %s\n", LEFT_CHILD(bnode)->array_string, toRegister(RIGHT_CHILD(bnode)->reg)); free(LEFT_CHILD(bnode)->array_string);arrayFree(LEFT_CHILD(bnode));
+reg: TYPE_MUL(reg, array) # 1 # bnode->reg = LEFT_CHILD(bnode)->reg; printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(LEFT_CHILD(bnode)->reg)); free(RIGHT_CHILD(bnode)->array_string);arrayFree(RIGHT_CHILD(bnode));
+reg: TYPE_MUL(array, array) # 1 # bnode->reg = getreg(); printf("\tmovq %s, %s\n", LEFT_CHILD(bnode)->array_string ,toRegister(bnode->reg)); printf("\timulq %s, %s\n", RIGHT_CHILD(bnode)->array_string, toRegister(bnode->reg));free(LEFT_CHILD(bnode)->array_string);free(RIGHT_CHILD(bnode)->array_string);arrayFree(LEFT_CHILD(bnode));arrayFree(RIGHT_CHILD(bnode));
+
+
+
+g_cond: TYPE_GREATER(reg, reg) # 1 # C_JMP(bnode, "jg", 0, 0);
+g_cond: TYPE_GREATER(constant, reg) # 1 # JMP_CONST_REG(bnode, "jl", 0, 0, 0);
+g_cond: TYPE_GREATER(reg, constant) # 1 # JMP_CONST_REG(bnode, "jg",1, 0, 0);
+g_cond: TYPE_GREATER(constant, variable) # 1 # JMP_CONST_REG(bnode, "jl", 0, 1, 0);
+g_cond: TYPE_GREATER(variable, constant) # 1 # JMP_CONST_REG(bnode, "jg", 1, 1, 0);
+g_cond: TYPE_GREATER(constant, constant) # 1 # GREATER_CONST_CONST(bnode);
+u_cond: TYPE_UNE(reg, reg) # 1 # C_JMP(bnode, "jne", 0, 0);
+u_cond: TYPE_UNE(constant, reg) # 1 # JMP_CONST_REG(bnode, "jne",  0, 0, 0);
+u_cond: TYPE_UNE(constant, variable) # 1 # JMP_CONST_REG(bnode, "jne",  0, 1, 0);
+u_cond: TYPE_UNE(reg, constant) # 1 # JMP_CONST_REG(bnode, "jne",  1, 0, 0);
+u_cond: TYPE_UNE(variable, constant) # 1 # JMP_CONST_REG(bnode, "jne",  1, 1, 0);
+u_cond: TYPE_UNE(constant, constant) # 1 # UNE_CONST_CONST(bnode);
+
+g_cond: TYPE_UNE(variable, variable) # 1 # C_JMP(bnode, "jne", 0, 0);
+g_cond: TYPE_GREATER(variable, variable) # 1 # C_JMP(bnode, "jg", 0, 0);
+
+
+g_cond: TYPE_GREATER(constant, array) # 1 # JMP_CONST_REG(bnode, "jl", 0, 1, 1);
+g_cond: TYPE_GREATER(array, constant) # 1 # JMP_CONST_REG(bnode, "jg",1, 0, 1);
+u_cond: TYPE_UNE(constant, array) # 1 # JMP_CONST_REG(bnode, "jne",  0, 1, 1);
+u_cond: TYPE_UNE(array, constant) # 1 # JMP_CONST_REG(bnode, "jne",  1, 0, 1);
+
+g_cond: TYPE_GREATER(reg, array) # 1 # C_JMP(bnode, "jl", 1, 1);
+g_cond: TYPE_GREATER(array, reg) # 1 # C_JMP(bnode, "jg", 0, 1);
+g_cond: TYPE_UNE(reg, array) # 1 # C_JMP(bnode, "jne", 1, 1);
+g_cond: TYPE_UNE(array, reg) # 1 # C_JMP(bnode, "jne", 0, 1);
+
+g_cond: TYPE_GREATER(variable, array) # 1 # C_JMP(bnode, "jl", 1, 1);
+g_cond: TYPE_GREATER(array, variable) # 1 # C_JMP(bnode, "jg", 0, 1);
+g_cond: TYPE_UNE(variable, array) # 1 # C_JMP(bnode, "jne", 1, 1);
+g_cond: TYPE_UNE(array, variable) # 1 # C_JMP(bnode, "jne", 0, 1);
+
+cond: g_cond # 2 #
+cond: u_cond # 2 #
+cond: TYPE_COND(cond) # 0 # 
+cond: TYPE_NOT(cond) # 0 # 
+cond: TYPE_AND(left,cond) # 0 # 
+left: cond # 1 # printf("%s:\n", bnode->truelabel);free(bnode->truelabel);
+
+reg: TYPE_CALL(param) # 1 #  popParams(bnode->const_num); printf("\tcall %s\n", bnode->name); bnode->reg=getreg(); if(bnode->reg != rax)printf("\tmovq \%rax, %s\n", toRegister(bnode->reg));if(bnode->outer)popCallerSaved();
+param: TYPE_FUNPAR(param, reg) # 1 # printf("\tpush %s\n", toRegister(RIGHT_CHILD(bnode)->reg));freeReg(RIGHT_CHILD(bnode)->reg);
+param: TYPE_FUNPAR(param, constant) # 1 # printf("\tpush $%d\n", RIGHT_CHILD(bnode)->const_num);
+param: TYPE_FUNPAR(param, array) # 1 # printf("\tpush %s\n", RIGHT_CHILD(bnode)->array_string);free(RIGHT_CHILD(bnode)->array_string);
+param: TYPE_FUNPAR(param, variable) # 1 # printf("\tpush %s\n", toRegister(RIGHT_CHILD(bnode)->reg));
+param: TYPE_FUNPARE(reg) # 1 # pushCallerSaved(); printf("\tpush %s\n", toRegister(LEFT_CHILD(bnode)->reg));freeReg(LEFT_CHILD(bnode)->reg);
+param: TYPE_FUNPARE(constant) # 1 # pushCallerSaved(); printf("\tpush $%d\n", LEFT_CHILD(bnode)->const_num);
+param: TYPE_FUNPARE(array) # 1 # pushCallerSaved(); printf("\tpush %s\n", LEFT_CHILD(bnode)->array_string);free(LEFT_CHILD(bnode)->array_string);
+param: TYPE_FUNPARE(variable) # 1 # pushCallerSaved(); printf("\tpush %s\n", toRegister(LEFT_CHILD(bnode)->reg));
+%%
