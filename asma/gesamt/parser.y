@@ -220,7 +220,19 @@ Program: Funcdef SEMICOLON Program
 	@} 
 	;
 
-Funcdef: ID BOPEN Pars BCLOSE Stats END
+Funcdef:  ID BOPEN Pars BCLOSE END
+	@{
+		@e Funcdef.names : Pars.names;
+		@Funcdef.names@ = @Pars.names@;
+		
+		@i @Funcdef.node@ = gen_node(TYPE_NOSTATS, NULL, NULL, 0, NULL);
+
+		@i @Funcdef.functionname@ = @ID.name@;
+		@i @Funcdef.parnames@ = @Pars.names@;
+
+		
+	@}	
+	| ID BOPEN Pars BCLOSE Stats END
 	@{
 		@e Funcdef.names : Pars.names Stats.names;
 		@Funcdef.names@ = concatList(@Stats.names@, @Pars.names@);
@@ -620,7 +632,7 @@ Term: BOPEN Expr BCLOSE
 	@{
 		@i @Term.names@ = NULL;
 		
-		@i @Term.node@ = gen_node(TYPE_CALL, NULL, NULL, 0, @ID.name@);
+		@i @Term.node@ = gen_node(TYPE_CALLN, NULL, NULL, 0, @ID.name@);
 
 	@}
 	| ID BOPEN beistrichExpr BCLOSE

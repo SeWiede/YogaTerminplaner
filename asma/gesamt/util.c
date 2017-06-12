@@ -12,10 +12,13 @@ struct parameters{
 	int regno;
 }parameters[16];
 
-enum REG_STATUS{REG_FREE =0, REG_USED, REG_PARAM_USED, REG_CALLEE_SAVED_FREE};
+enum REG_STATUS{REG_FREE =0, REG_USED, REG_PARAM_USED, REG_CALLEE_SAVED_FREE, REG_FUNC_PUSHED};
 
 
 static int registers[16] = {0};
+
+static int pushedFuncRegs[16] ={0};
+
 int parnums[] = {4, 3, 2, 1, 5, 6};
 
 int pushed = 0;
@@ -81,6 +84,21 @@ int isCalleeSaved(int regno){
 }
 
 
+int getregFunret(void){
+	int i=1;
+	for(i; i<16; i++) {
+		if(registers[i] == REG_FREE || registers[i] == REG_CALLEE_SAVED_FREE) {
+			if(isCalleeSaved(i) == 1 && registers[i] == REG_FREE){
+				printf("\tpush %s\n", toRegister(i));	
+			}
+			registers[i] = REG_USED;
+			return i;
+		}
+	}
+	printf("out of registers \n");
+	exit(4);
+}
+
 int getreg(void){
 	int i=0;
 	for(i; i<16; i++) {
@@ -122,8 +140,9 @@ void freeTempRegs(){
 	for(i=15; i >=0 ;i--){
 		if(registers[i] == REG_USED && isCalleeSaved(i) == 1)
 			printf("\tpop %s\n", toRegister(i));
-		if(registers[i] == REG_USED)
+		if(registers[i] == REG_USED) {
 			registers[i] = REG_FREE;
+		}
 	}
 }
 int getregForVariable(char *var) {
@@ -179,8 +198,9 @@ void pushCallerSaved(void){
 	if(pushed)
 		return;
 	for(i=0; i<16; i++) {
-		if(registers[i] == REG_PARAM_USED){
+		if(registers[i] == REG_PARAM_USED || registers[i] == REG_USED){
 			printf("\tpush %s\n", toRegister(i));
+			pushedFuncRegs[i] = REG_FUNC_PUSHED;
 		}
 	}
 	pushed = 1;
@@ -193,11 +213,12 @@ void popParams(int numParams) {
 	}
 }
 
-void popCallerSaved(void){
+void popCallerSaved(){
 	int i;
 	for(i=15; pushed ==1 && i>=0; i--) {
-		if(registers[i] == REG_PARAM_USED) {
-			printf("\tpop %s\n", toRegister(i));
+		if(pushedFuncRegs[i] == REG_FUNC_PUSHED) {
+			printf("\tpop %s\n", toRegister(i));	
+			pushedFuncRegs[i] = 0;
 		}
 	}
 	pushed=0;
@@ -208,6 +229,7 @@ void resetRegisters(void) {
 	int i=0;
 	for(i=0; i<16; i++) {
 		registers[i] = REG_FREE;
+		pushedFuncRegs[i] = 0;
 	}
 	pushed=0;
 }

@@ -40,6 +40,8 @@ void arrayFree(Tree bnode);
 
 void pushCallerSaved(void);
 void popParams(int numParams);
-void popCallerSaved(void);
-void resetRegisters(void); 
+void popCallerSaved();
+void resetRegisters(void);
+
+int getregFunret(void); 
 #endif
