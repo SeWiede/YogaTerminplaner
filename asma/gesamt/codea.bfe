@@ -288,10 +288,10 @@ cond: TYPE_NOT(cond) # 0 #
 cond: TYPE_AND(left,cond) # 0 # 
 left: cond # 1 # printf("%s:\n", bnode->truelabel);free(bnode->truelabel);
 
-reg: TYPE_CALLN # 1 #  pushCallerSaved();printf("\tcall %s\n", bnode->name); bnode->reg=getregFunret(); if(bnode->reg != rax)printf("\tmovq \%rax, %s\n", toRegister(bnode->reg));if(bnode->outer)popCallerSaved();
+reg: TYPE_CALLN # 1 #  pushCallerSaved();printf("\tcall %s\n", bnode->name); bnode->reg=getregFunret(); if(bnode->reg != rax)printf("\tmovq \%rax, %s\n", toRegister(bnode->reg));popCallerSaved();
 
 
-reg: TYPE_CALL(param) # 1 #  popParams(bnode->const_num); printf("\tcall %s\n", bnode->name); bnode->reg=getregFunret(); if(bnode->reg != rax)printf("\tmovq \%rax, %s\n", toRegister(bnode->reg));if(bnode->outer)popCallerSaved();
+reg: TYPE_CALL(param) # 1 #  popParams(bnode->const_num); printf("\tcall %s\n", bnode->name); bnode->reg=getregFunret(); if(bnode->reg != rax)printf("\tmovq \%rax, %s\n", toRegister(bnode->reg));popCallerSaved();
 param: TYPE_FUNPAR(param, reg) # 1 # printf("\tpush %s\n", toRegister(RIGHT_CHILD(bnode)->reg));freeReg(RIGHT_CHILD(bnode)->reg);
 param: TYPE_FUNPAR(param, constant) # 1 # printf("\tpush $%d\n", RIGHT_CHILD(bnode)->const_num);
 param: TYPE_FUNPAR(param, array) # 1 # printf("\tpush %s\n", RIGHT_CHILD(bnode)->array_string);free(RIGHT_CHILD(bnode)->array_string);

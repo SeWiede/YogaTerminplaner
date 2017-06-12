@@ -22,7 +22,7 @@ static int pushedFuncRegs[16] ={0};
 int parnums[] = {4, 3, 2, 1, 5, 6};
 
 int pushed = 0;
-
+int currdepth = 0;
 void populateParameters(NameList par){
 	int i;
 	for(i=0;par != NULL && i < 6;i++){
@@ -87,6 +87,9 @@ int isCalleeSaved(int regno){
 int getregFunret(void){
 	int i=1;
 	for(i; i<16; i++) {
+		if(pushedFuncRegs[i] > 0)
+			continue;
+
 		if(registers[i] == REG_FREE || registers[i] == REG_CALLEE_SAVED_FREE) {
 			if(isCalleeSaved(i) == 1 && registers[i] == REG_FREE){
 				printf("\tpush %s\n", toRegister(i));	
@@ -195,15 +198,15 @@ void arrayFree(Tree bnode){
 
 void pushCallerSaved(void){
 	int i;
-	if(pushed)
-		return;
+	//if(pushed)
+	//	return;
 	for(i=0; i<16; i++) {
 		if(registers[i] == REG_PARAM_USED || registers[i] == REG_USED){
 			printf("\tpush %s\n", toRegister(i));
-			pushedFuncRegs[i] = REG_FUNC_PUSHED;
+			pushedFuncRegs[i] ++;
 		}
 	}
-	pushed = 1;
+	currdepth++;
 }
 
 void popParams(int numParams) {
@@ -215,13 +218,13 @@ void popParams(int numParams) {
 
 void popCallerSaved(){
 	int i;
-	for(i=15; pushed ==1 && i>=0; i--) {
-		if(pushedFuncRegs[i] == REG_FUNC_PUSHED) {
+	for(i=15; i>=0; i--) {
+		if(pushedFuncRegs[i] == currdepth) {
 			printf("\tpop %s\n", toRegister(i));	
-			pushedFuncRegs[i] = 0;
+			pushedFuncRegs[i]--;
 		}
 	}
-	pushed=0;
+	currdepth--;
 } 
 
 
@@ -232,4 +235,7 @@ void resetRegisters(void) {
 		pushedFuncRegs[i] = 0;
 	}
 	pushed=0;
+	currdepth = 0;
 }
+
+

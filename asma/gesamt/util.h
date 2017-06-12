@@ -43,5 +43,6 @@ void popParams(int numParams);
 void popCallerSaved();
 void resetRegisters(void);
 
-int getregFunret(void); 
+int getregFunret(void);
+
 #endif
